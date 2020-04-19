@@ -22,7 +22,9 @@
             ],
             "styles": [
               "node_modules/@angular/material/prebuilt-themes/indigo-pink.css",
-              "src/styles.scss"
+              "src/styles.scss",
+              "src/assets/CSS/roboto.css",
+              "src/assets/CSS/material-icons/material-icons.css"
             ],
             "scripts": [
               "node_modules/plotly.js/dist/plotly.min.js"
@@ -171,7 +173,7 @@
   "schematics": {
     "@schematics/angular:component": {
       "prefix": "app",
-      "styleext": "scss"
+      "style": "scss"
     },
     "@schematics/angular:directive": {
       "prefix": "app"

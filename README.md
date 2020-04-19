@@ -11,9 +11,10 @@
 
 # Introduction
 
-Bootstrap and package your project with Angular 9 and Electron 8 (Typescript + SASS + Hot Reload) for creating Desktop applications.
+Bootstrap and package your project with Angular 9, Electron 8 and Angular Materials (Typescript + SASS + Hot Reload) for creating Desktop applications.
+Based on the [angular-electron](https://github.com/maximegris/angular-electron) repository of Maxime Gris.
 
-Currently runs with:
+Currently, runs with:
 
 - Angular v9.0.2
 - Electron v8.0.1
@@ -34,7 +35,7 @@ With this sample, you can :
 Clone this repository locally :
 
 ``` bash
-git clone https://github.com/maximegris/angular-electron.git
+git clone https://github.com/CPrescher/angular-electron-material.git
 ```
 
 Install dependencies with npm :
@@ -52,6 +53,11 @@ Please follow [Angular-cli documentation](https://github.com/angular/angular-cli
 ``` bash
 npm install -g @angular/cli
 ```
+
+## Angular Materials Theme
+
+The default angular material theme is set in the angular.json file to indigo-pink. Please see the 
+[angular theming website](https://material.angular.io/guide/theming), for instructions to switch the theme or create a custom theme.
 
 ## To build for development
 
@@ -86,25 +92,3 @@ YES! You can do it! Just by importing your library in npm dependencies section (
 Maybe you want to execute the application in the browser with hot reload ? Just run `npm run ng:serve:web`.
 **Note that you can't use Electron or NodeJS native libraries in this case.** Please check `providers/electron.service.ts` to watch how conditional import of electron/Native libraries is done.
 
-## Branch & Packages version
-
-- Angular 4 & Electron 1 : Branch [angular4](https://github.com/maximegris/angular-electron/tree/angular4)
-- Angular 5 & Electron 1 : Branch [angular5](https://github.com/maximegris/angular-electron/tree/angular5)
-- Angular 6 & Electron 3 : Branch [angular6](https://github.com/maximegris/angular-electron/tree/angular6)
-- Angular 7 & Electron 3 : Branch [angular7](https://github.com/maximegris/angular-electron/tree/angular7)
-- Angular 8 & Electron 7 : Branch [angular7](https://github.com/maximegris/angular-electron/tree/angular8)
-- Angular 9 & Electron 8 : (master)
-
-[build-badge]: https://travis-ci.org/maximegris/angular-electron.svg?branch=master&style=style=flat-square
-[build]: https://travis-ci.org/maximegris/angular-electron
-[license-badge]: https://img.shields.io/badge/license-Apache2-blue.svg?style=style=flat-square
-[license]: https://github.com/maximegris/angular-electron/blob/master/LICENSE.md
-[prs-badge]: https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square
-[prs]: http://makeapullrequest.com
-[github-watch-badge]: https://img.shields.io/github/watchers/maximegris/angular-electron.svg?style=social
-[github-watch]: https://github.com/maximegris/angular-electron/watchers
-[github-star-badge]: https://img.shields.io/github/stars/maximegris/angular-electron.svg?style=social
-[github-star]: https://github.com/maximegris/angular-electron/stargazers
-[twitter]: https://twitter.com/intent/tweet?text=Check%20out%20angular-electron!%20https://github.com/maximegris/angular-electron%20%F0%9F%91%8D
-[twitter-badge]: https://img.shields.io/twitter/url/https/github.com/maximegris/angular-electron.svg?style=social
-[maintained-badge]: https://img.shields.io/badge/maintained-yes-brightgreen
