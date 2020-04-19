@@ -1,0 +1,31 @@
+@import '~@angular/material/theming';
+
+.toolbar {
+  position: relative;
+  z-index: 1;
+  flex-grow: 0;
+  flex-shrink: 0;
+}
+.label {
+  margin-left: 5px;
+}
+
+.active {
+  color: mat-color(mat-palette($mat-orange));
+}
+
+.stretch {
+  flex-grow: 1;
+}
+
+mat-nav-list {
+  padding: 0;
+  height: 100%;
+  align-items: center;
+}
+
+button {
+  vertical-align: center;
+  height: 100%;
+  padding-top: 10px;
+}

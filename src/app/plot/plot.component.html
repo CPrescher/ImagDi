@@ -1,0 +1,11 @@
+<mat-card class="mat-elevation-z4">
+  <mat-card-content>
+    <plotly-plot
+      [data]="graph.data"
+      [layout]="graph.layout"
+      [config]="graph.config"
+      [useResizeHandler]="true"
+      [style]="{width:'100%', height:'100%'}">
+    </plotly-plot>
+  </mat-card-content>
+</mat-card>

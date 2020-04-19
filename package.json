@@ -1,21 +1,11 @@
 {
-  "name": "angular-electron",
-  "version": "7.0.1",
-  "description": "Angular 9 with Electron (Typescript + SASS + Hot Reload)",
-  "homepage": "https://github.com/maximegris/angular-electron",
+  "name": "ImagDi",
+  "version": "0.0.1",
+  "description": "An Image Display Software",
   "author": {
-    "name": "Maxime GRIS",
-    "email": "maxime.gris@gmail.com"
+    "name": "Clemens Prescher",
+    "email": "clemens.prescher@gmail.com"
   },
-  "keywords": [
-    "angular",
-    "angular 9",
-    "electron",
-    "typescript",
-    "eslint",
-    "spectron",
-    "sass"
-  ],
   "main": "main.js",
   "private": true,
   "scripts": {
@@ -90,5 +80,13 @@
   },
   "engines": {
     "node": ">=10.13.0"
+  },
+  "dependencies": {
+    "@angular/animations": "^9.0.0 || ^10.0.0-0",
+    "@angular/cdk": "^9.2.0",
+    "@angular/forms": "^9.0.0 || ^10.0.0-0",
+    "@angular/material": "^9.2.0",
+    "angular-plotly.js": "^2.0.0",
+    "plotly.js": "^1.53.0"
   }
 }

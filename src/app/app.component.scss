@@ -1,0 +1,29 @@
+.sidenav-content{
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+main {
+  position: relative;
+  flex: 1;
+  padding: 24px;
+  overflow: auto;
+  display: flex;
+  flex-flow: row wrap;
+  width: 100%;
+  max-width: 100%;
+}
+
+
+.control {
+  position: relative;
+  flex: 1 1 150px;
+}
+
+.plot {
+  position: relative;
+  flex: 3 3 500px;
+  margin-left: 20px;
+}
+

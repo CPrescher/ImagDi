@@ -16,10 +16,6 @@ export class ElectronService {
   childProcess: typeof childProcess;
   fs: typeof fs;
 
-  get isElectron(): boolean {
-    return !!(window && window.process && window.process.type);
-  }
-
   constructor() {
     // Conditional imports
     if (this.isElectron) {
@@ -30,5 +26,16 @@ export class ElectronService {
       this.childProcess = window.require('child_process');
       this.fs = window.require('fs');
     }
+  }
+
+  get isElectron(): boolean {
+    return !!(window && window.process && window.process.type);
+  }
+
+  getFileDialog(title: string) {
+    return this.remote.dialog.showOpenDialog({
+      title: title,
+      properties: ['openFile']
+    })
   }
 }

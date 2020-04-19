@@ -1,0 +1,29 @@
+<mat-card>
+  <mat-card-title>
+    Load Images
+  </mat-card-title>
+  <mat-card-content>
+    <input #FileSelectInputDialog
+           type="file"
+           class="file-input"
+           (change)="onFileSelected($event)"/>
+    <button mat-raised-button (click)="onLoad()">Load</button>
+
+    <button mat-icon-button class="icon">
+      <mat-icon>keyboard_arrow_left</mat-icon>
+    </button>
+    <button mat-icon-button class="icon">
+      <mat-icon>keyboard_arrow_right</mat-icon>
+    </button>
+    <mat-form-field class="step-input">
+      <mat-label>Step</mat-label>
+      <input matInput type="number" value="1">
+    </mat-form-field>
+
+    <form #form="ngForm" (ngSubmit)="onSubmit(form.value)">
+      <mat-form-field>
+        <input matInput type="text" placeholder="file name" name="filename" ngModel>
+      </mat-form-field>
+    </form>
+  </mat-card-content>
+</mat-card>

@@ -1,1 +1,13 @@
-<router-outlet></router-outlet>
+<mat-sidenav-container>
+  <mat-sidenav-content class="sidenav-content">
+    <app-header></app-header>
+    <main class="content">
+      <div class="control">
+        <router-outlet></router-outlet>
+      </div>
+      <div class="plot">
+        <app-plot></app-plot>
+      </div>
+    </main>
+  </mat-sidenav-content>
+</mat-sidenav-container>
