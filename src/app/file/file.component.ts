@@ -1,5 +1,6 @@
 import { Component, ElementRef, OnInit, ViewChild } from '@angular/core';
 import { ElectronService } from '../core/services';
+import { DataSourceService } from '../core/services/data-source.service';
 // import { ElectronService } from '../core/services';
 
 @Component({
@@ -11,7 +12,9 @@ export class FileComponent implements OnInit {
   @ViewChild('FileSelectInputDialog') fileSelectInputDialog: ElementRef;
 
 
-  constructor(private electronService: ElectronService) {
+  constructor(
+    private electronService: ElectronService,
+    private dataSource: DataSourceService) {
   }
 
   ngOnInit(): void {
@@ -40,5 +43,9 @@ export class FileComponent implements OnInit {
     console.log(file);
     const data = new FormData();
     data.append("file", file, file.name);
+  }
+
+  onRandom() {
+    this.dataSource.getRandomImage();
   }
 }
