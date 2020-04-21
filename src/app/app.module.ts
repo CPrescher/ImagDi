@@ -14,7 +14,7 @@ import { AppComponent } from './app.component';
 import { FileComponent } from './file/file.component';
 import { HeaderComponent } from './header/header.component';
 import { PlotComponent } from './plot/plot.component';
-import { MaterialsModule } from './materials.module';
+import { MaterialsModule } from './shared/materials.module';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 
 import { PlotlyViaWindowModule } from 'angular-plotly.js';
