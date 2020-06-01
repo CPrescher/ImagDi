@@ -1,4 +1,5 @@
 import { Component, OnInit } from '@angular/core';
+import { DataSourceService } from '../core/services/data-source.service';
 
 @Component({
   selector: 'app-plot',
@@ -11,24 +12,37 @@ export class PlotComponent implements OnInit {
   public graph = {
     data:
       [
-        {x: [1, 2, 3], y: [2, 6, 3], type: 'scatter', mode: 'lines+points', marker: {color: 'red'}},
-        {x: [1, 2, 3], y: [2, 5, 3], type: 'bar'},
+        {
+          z: [[1, 20, 30], [20, 1, 60], [30, 60, 1]],
+          type: 'heatmapgl'
+        }
       ],
     layout:
       {
-        autosize: true, fillFrame: false, frameMargins: 0.1, title: 'A Fancy Plot'
+        // autosize: true, fillFrame: false, frameMargins: 0.1, title: 'A Fancy Plot'
       },
     config:
       {
-        responsive: true,
+      //   responsive: true,
       }
   }
 
 
-  constructor() {
+  constructor(private dataService: DataSourceService) {
+
   }
 
   ngOnInit(): void {
+    this.dataService.imageChanged.subscribe(
+      imageData => {
+        console.log('new data');
+        this.plotImage(imageData);
+      }
+    )
+  }
+
+  plotImage(imageData) {
+    this.graph.data[0].z = imageData;
   }
 
 }
