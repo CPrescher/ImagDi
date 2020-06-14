@@ -13,8 +13,10 @@ export class PlotComponent implements OnInit {
     data:
       [
         {
-          z: [[1, 20, 30], [20, 1, 60], [30, 60, 1]],
-          type: 'heatmapgl'
+          z: [[50, 20, 30], [20, 1, 60], [30, 60, 1]],
+            // [50, 20, 30], [20, 1, 60], [30, 60, 200],
+            //   [50, 20, 30], [20, 1, 60], [30, 60, 200]],
+          type: 'heatmapgl',
         }
       ],
     layout:
@@ -23,7 +25,7 @@ export class PlotComponent implements OnInit {
       },
     config:
       {
-      //   responsive: true,
+         // responsive: true,
       }
   }
 

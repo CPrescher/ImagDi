@@ -87,7 +87,8 @@
     "@angular/forms": "^9.0.0 || ^10.0.0-0",
     "@angular/material": "^9.2.0",
     "angular-plotly.js": "^2.0.0",
-    "plotly": "^1.0.6",
-    "plotly.js": "^1.53.0"
+    "karma-chrome-launcher": "^3.1.0",
+    "plotly.js": "^1.54.1",
+    "three": "^0.117.1"
   }
 }

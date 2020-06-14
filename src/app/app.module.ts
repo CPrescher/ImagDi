@@ -24,7 +24,8 @@ import { PlotlyViaWindowModule } from 'angular-plotly.js';
     AppComponent,
     FileComponent,
     HeaderComponent,
-    PlotComponent],
+    PlotComponent
+  ],
   imports: [
     BrowserModule,
     BrowserAnimationsModule,

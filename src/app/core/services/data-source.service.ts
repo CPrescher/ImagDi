@@ -19,10 +19,15 @@ export class DataSourceService {
     let startTime = performance.now();
 
     this.http.post(
-      'http://127.0.0.1:5000/random',
+      'http://127.0.0.1:5000/gaussian',
       {
-        x_dim: 1024,
-        y_dim: 1024
+        x_dim: 9,
+        y_dim: 9,
+        center_x: 4,
+        center_y: 5,
+        fwhm_x: 3,
+        fwhm_y: 2,
+        theta: 0.3
       }, {responseType: 'arraybuffer'})
       .subscribe(responseData => {
         // console.log(responseData);
