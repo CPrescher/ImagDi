@@ -17,3 +17,19 @@ canvas {
   position: relative;
   flex: 2;
 }
+.mouseInfo {
+  display: flex;
+  flex-flow: row;
+  overflow: auto;
+}
+
+.mousePosition {
+  position: relative;
+  overflow: auto;
+  flex: 0 1 55px;
+  width: 55px;
+}
+
+.spacer {
+  flex: 5;
+}
