@@ -26,7 +26,7 @@ module.exports = function (config) {
     colors: true,
     logLevel: config.LOG_INFO,
     autoWatch: true,
-    browsers: ['AngularElectron', 'Chrome'],
+    browsers: ['Chrome'], //['AngularElectron', 'Chrome'],
     singleRun: false,
     customLaunchers: {
       AngularElectron: {

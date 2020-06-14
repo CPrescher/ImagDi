@@ -51,4 +51,50 @@ export class DataSourceService {
     }
     return result;
   }
+
+  make2dArray(rows, cols) {
+    let arr = new Array(rows);
+    for (let r = 0; r < rows; r++) {
+      arr[r] = new Array(cols);
+    }
+    return arr;
+  }
+
+
+  createOnes(rows, cols) {
+    let result = new Array(rows);
+    for (let r = 0; r < rows; r++) {
+      result[r] = new Array(cols);
+      for (let c = 0; c < cols; c++) {
+        result[r][c] = new Array(3);
+        for (let d = 0; d < 3; d++) {
+          result[r][c][d] = 1;
+        }
+      }
+    }
+    return result;
+  }
+
+  applyLut(matrix) {
+    let color;
+    let result = matrix.slice();
+    for (let i = 0; i < matrix.length; i++) {
+      for (let j = 0; j < matrix[i].length; j++) {
+        color = i/matrix.length * j/matrix[i].length * 255;
+        result[i][j][0] *= color;
+        result[i][j][1] *= color;
+        result[i][j][2] *= color;
+      }
+    }
+    return result
+  }
+
+  applyLut2(matrix) {
+    return matrix.map(
+      (row) => {
+        row.map((col) => {
+          col.map((x) => x * 5)
+        })
+      })
+  }
 }

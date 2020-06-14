@@ -13,10 +13,11 @@ export class PlotComponent implements OnInit {
     data:
       [
         {
-          z: [[50, 20, 30], [20, 1, 60], [30, 60, 1]],
-            // [50, 20, 30], [20, 1, 60], [30, 60, 200],
-            //   [50, 20, 30], [20, 1, 60], [30, 60, 200]],
-          type: 'heatmapgl',
+          z: [[[50, 20, 30], [20, 1, 60], [30, 60, 1]],
+              [[50, 20, 30], [20, 1, 60], [30, 60, 200]],
+              [[50, 20, 30], [20, 1, 60], [30, 60, 200]]],
+          type: 'image',
+          hoverinfo: 'skip',
         }
       ],
     layout:
@@ -41,6 +42,10 @@ export class PlotComponent implements OnInit {
         this.plotImage(imageData);
       }
     )
+    let onesMatrix = this.dataService.createOnes(50, 50);
+    let lutMatrix = this.dataService.applyLut(onesMatrix);
+    this.plotImage(lutMatrix);
+
   }
 
   plotImage(imageData) {
