@@ -52,14 +52,45 @@ export class DataSourceService {
     return result;
   }
 
-  make2dArray(rows, cols) {
-    let arr = new Array(rows);
-    for (let r = 0; r < rows; r++) {
-      arr[r] = new Array(cols);
+  createDummyImage(width, height) {
+    let size = width * height;
+    let data = new Uint8Array(3 * size);
+
+    let color: number;
+    let index: number;
+
+    for (let i = 0; i < width; i++) {
+      for (let j = 0; j < height; j++) {
+        index = (i * width + j) * 3;
+        color = Math.floor(i/(width-1) * j/(height-1) * 255);
+
+        data[index] = color;
+        data[index + 1] = color;
+        data[index + 2] = color;
+      }
     }
-    return arr;
+    return data;
   }
 
+  createRandomImage(width, height) {
+    let size = width * height;
+    let data = new Uint8Array(3 * size);
+
+    let color: number;
+    let index: number;
+
+    for (let i = 0; i < width; i++) {
+      for (let j = 0; j < height; j++) {
+        index = (i * width + j) * 3;
+        color = Math.floor(Math.random() * 255);
+
+        data[index] = color;
+        data[index + 1] = color;
+        data[index + 2] = color;
+      }
+    }
+    return data;
+  }
 
   createOnes(rows, cols) {
     let result = new Array(rows);

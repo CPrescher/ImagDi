@@ -18,13 +18,15 @@ import { MaterialsModule } from './shared/materials.module';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 
 import { PlotlyViaWindowModule } from 'angular-plotly.js';
+import { WebglPlotComponent } from './webgl-plot/webgl-plot.component';
 
 @NgModule({
   declarations: [
     AppComponent,
     FileComponent,
     HeaderComponent,
-    PlotComponent
+    PlotComponent,
+    WebglPlotComponent
   ],
   imports: [
     BrowserModule,
