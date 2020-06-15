@@ -3,7 +3,7 @@ import { AfterViewInit, Component, ElementRef, OnDestroy, OnInit, ViewChild } fr
 import * as THREE from 'three';
 import { DataSourceService } from '../core/services';
 import { interval } from 'rxjs';
-import { OrthographicCamera } from 'three';
+import { FaceRectangle, LineRectangle, Rectangle } from './rectangle';
 
 @Component({
   selector: 'app-webgl-plot',
@@ -18,9 +18,12 @@ export class WebglPlotComponent implements OnInit, AfterViewInit, OnDestroy {
   scene: THREE.Scene;
   camera: THREE.OrthographicCamera;
   renderer: THREE.WebGLRenderer;
-  geometry: THREE.BoxGeometry;
-  texture: THREE.Texture;
-  material: THREE.MeshBasicMaterial;
+
+  imageGeometry: THREE.PlaneGeometry;
+  imageTexture: THREE.Texture;
+  imageMaterial: THREE.MeshBasicMaterial;
+
+  zoomRectangle: Rectangle;
 
   // mouse position variables
   mouseXpx: number; // pixel value over canvas
@@ -54,16 +57,24 @@ export class WebglPlotComponent implements OnInit, AfterViewInit, OnDestroy {
   initTHREE() {
     this.scene = new THREE.Scene();
     this.camera = new THREE.OrthographicCamera(0, 1, 1, 0, 1, 1000);
-    this.renderer = new THREE.WebGLRenderer({canvas: this.webglCanvas.nativeElement});
-    this.geometry = new THREE.BoxGeometry();
-    this.texture = new THREE.DataTexture(new Uint8Array([0, 0, 0]), 1, 1, THREE.RGBFormat)
-    this.material = new THREE.MeshBasicMaterial({map: this.texture});
-    let cube = new THREE.Mesh(this.geometry, this.material);
-    cube.position.x = 0.5;
-    cube.position.y = 0.5;
-    this.scene.add(cube);
     this.camera.position.z = 100;
+    this.renderer = new THREE.WebGLRenderer({canvas: this.webglCanvas.nativeElement});
+
+    this.initImagePlane()
+    this.zoomRectangle = new Rectangle(this.scene, 0.1, 0.1, 0.4, 0.4);
+    // this.zoomRectangle.hide();
+
     this.renderer.render(this.scene, this.camera);
+  }
+
+  initImagePlane() {
+    this.imageGeometry = new THREE.PlaneGeometry(1, 1);
+    this.imageTexture = new THREE.DataTexture(new Uint8Array([0, 0, 0]), 1, 1, THREE.RGBFormat)
+    this.imageMaterial = new THREE.MeshBasicMaterial({map: this.imageTexture});
+    let plane = new THREE.Mesh(this.imageGeometry, this.imageMaterial);
+    plane.position.x = 0.5;
+    plane.position.y = 0.5;
+    this.scene.add(plane);
   }
 
   initMouseInteraction() {
@@ -100,13 +111,45 @@ export class WebglPlotComponent implements OnInit, AfterViewInit, OnDestroy {
       this.renderer.render(this.scene, this.camera);
 
     })
+
+    this.initDragZoomListener()
+
+
+  }
+
+  initDragZoomListener() {
+    let startX: number;
+    let startY: number;
+    this.webglCanvas.nativeElement.addEventListener('mousedown', event => {
+      startX = this.camera.left + this.mouseXFrac * (this.camera.right - this.camera.left);
+      startY = this.camera.bottom + this.mouseYFrac * (this.camera.top - this.camera.bottom);
+      this.zoomRectangle.setBoundingRect(startX, startY, this.mouseXFrac, this.mouseYFrac);
+      this.webglCanvas.nativeElement.addEventListener('mousemove', zoomDrag)
+      // this.zoomRectangle.show();
+      this.zoomRectangle.moveTo(startX, startY);
+    })
+
+    let zoomDrag = (event) => {
+      this.zoomRectangle.setBoundingRect(
+        startX, startY,
+        this.camera.left + this.mouseXFrac * (this.camera.right - this.camera.left),
+        this.camera.bottom + this.mouseYFrac * (this.camera.top - this.camera.bottom
+        ));
+      this.renderer.render(this.scene, this.camera);
+    }
+
+    window.addEventListener('mouseup', event => {
+      // this.zoomRectangle.hide()
+      this.renderer.render(this.scene, this.camera);
+      this.webglCanvas.nativeElement.removeEventListener('mousemove', zoomDrag)
+    })
   }
 
   plotImage(imageArray, width, height) {
-    this.texture.dispose();
+    this.imageTexture.dispose();
 
-    this.texture = new THREE.DataTexture(imageArray, width, height, THREE.RGBFormat);
-    this.material.map = this.texture;
+    this.imageTexture = new THREE.DataTexture(imageArray, width, height, THREE.RGBFormat);
+    this.imageMaterial.map = this.imageTexture;
     this.renderer.render(this.scene, this.camera);
 
     this.imageWidth = width;
