@@ -4,6 +4,7 @@ import * as THREE from 'three';
 import { DataSourceService } from '../core/services';
 import { interval } from 'rxjs';
 import { FaceRectangle, LineRectangle, Rectangle } from './rectangle';
+import Timeout = NodeJS.Timeout;
 
 @Component({
   selector: 'app-webgl-plot',
@@ -26,12 +27,14 @@ export class WebglPlotComponent implements OnInit, AfterViewInit, OnDestroy {
   zoomRectangle: Rectangle;
 
   // mouse position variables
-  mouseXpx: number; // pixel value over canvas
+  mouseXpx: number; // screen pixel value over canvas
   mouseYpx: number;
   mouseXFrac: number;  // fractional value over canvas
   mouseYFrac: number;
-  mouseX: number; // mouse position in image dimensions
+  mouseX: number; // mouse position in image dimensions in px
   mouseY: number;
+  cameraXFrac: number;
+  cameraYFrac: number;
 
   // image variables
   image;
@@ -56,13 +59,13 @@ export class WebglPlotComponent implements OnInit, AfterViewInit, OnDestroy {
 
   initTHREE() {
     this.scene = new THREE.Scene();
-    this.camera = new THREE.OrthographicCamera(0, 1, 1, 0, 1, 1000);
-    this.camera.position.z = 100;
+    this.camera = new THREE.OrthographicCamera(0, 1, 1, 0, 0, 100000);
+    this.camera.position.z = 10000;
     this.renderer = new THREE.WebGLRenderer({canvas: this.webglCanvas.nativeElement});
 
     this.initImagePlane()
     this.zoomRectangle = new Rectangle(this.scene, 0.1, 0.1, 0.4, 0.4);
-    // this.zoomRectangle.hide();
+    this.zoomRectangle.hide();
 
     this.renderer.render(this.scene, this.camera);
   }
@@ -78,7 +81,15 @@ export class WebglPlotComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   initMouseInteraction() {
-    this.webglCanvas.nativeElement.addEventListener("mousemove", event => {
+    this.initMousePositionListener();
+    this.initWheelZoomListener();
+    this.initDragZoomListener();
+    this.initRightClickInteraction();
+
+  }
+
+  initMousePositionListener() {
+    window.addEventListener("mousemove", (event: MouseEvent) => {
       let boundingRect = this.webglCanvas.nativeElement.getBoundingClientRect();
 
       this.mouseXpx = event.x - boundingRect.left;
@@ -87,65 +98,183 @@ export class WebglPlotComponent implements OnInit, AfterViewInit, OnDestroy {
       this.mouseXFrac = this.mouseXpx / boundingRect.width;
       this.mouseYFrac = this.mouseYpx / boundingRect.height;
 
-      this.mouseX = Math.floor(this.imageWidth * this.mouseXFrac);
-      this.mouseY = Math.floor(this.imageHeight * this.mouseYFrac);
+      const cameraWidth = this.camera.right - this.camera.left;
+      const cameraHeight = this.camera.top - this.camera.bottom;
+
+      this.cameraXFrac = this.camera.left + this.mouseXFrac * cameraWidth;
+      this.cameraYFrac = this.camera.bottom + this.mouseYFrac * cameraHeight;
+
+      if (this.isInsideBoundingRect(event.x, event.y, boundingRect)) {
+        this.mouseX = Math.floor(this.camera.left * this.imageWidth + cameraWidth * this.imageWidth * this.mouseXFrac);
+        this.mouseY = Math.floor(this.camera.bottom * this.imageHeight + cameraHeight * this.imageHeight * this.mouseYFrac);
+      }
     })
+  }
 
-    this.webglCanvas.nativeElement.addEventListener("wheel", event => {
-      let currentWidth = this.camera.right - this.camera.left;
-      let currentHeight = this.camera.top - this.camera.bottom;
-
-      const factor = (1 + event.deltaY / 100 * 0.1);
-
-      let newLeft = this.camera.left + this.mouseXFrac * currentWidth * (1 - factor);
-      let newRight = this.camera.right - (1 - this.mouseXFrac) * currentWidth * (1 - factor);
-      let newBottom = this.camera.bottom + this.mouseYFrac * currentHeight * (1 - factor);
-      let newTop = this.camera.top - (1 - this.mouseYFrac) * currentHeight * (1 - factor);
-
-      this.camera.left = newLeft;
-      this.camera.right = newRight;
-      this.camera.top = newTop;
-      this.camera.bottom = newBottom;
-      this.camera.updateProjectionMatrix()
-
-      this.renderer.render(this.scene, this.camera);
-
+  initWheelZoomListener() {
+    this.webglCanvas.nativeElement.addEventListener("wheel", (event: WheelEvent) => {
+      this.zoom(1 + event.deltaY / 100 * 0.1)
     })
-
-    this.initDragZoomListener()
-
-
   }
 
   initDragZoomListener() {
     let startX: number;
     let startY: number;
+    let dragZoom = false;
+
     this.webglCanvas.nativeElement.addEventListener('mousedown', event => {
+      if (event.button != 0) { // left click
+        return
+      }
+
       startX = this.camera.left + this.mouseXFrac * (this.camera.right - this.camera.left);
       startY = this.camera.bottom + this.mouseYFrac * (this.camera.top - this.camera.bottom);
-      this.zoomRectangle.setBoundingRect(startX, startY, this.mouseXFrac, this.mouseYFrac);
-      this.webglCanvas.nativeElement.addEventListener('mousemove', zoomDrag)
-      // this.zoomRectangle.show();
+
+      this.zoomRectangle.show();
       this.zoomRectangle.moveTo(startX, startY);
+      this.zoomRectangle.width = 0;
+      this.zoomRectangle.height = 0;
+
+      this.webglCanvas.nativeElement.addEventListener('mousemove', zoomDrag)
+      dragZoom = true;
     })
 
-    let zoomDrag = (event) => {
+    let zoomDrag = (event: MouseEvent) => {
       this.zoomRectangle.setBoundingRect(
         startX, startY,
         this.camera.left + this.mouseXFrac * (this.camera.right - this.camera.left),
-        this.camera.bottom + this.mouseYFrac * (this.camera.top - this.camera.bottom
-        ));
+        this.camera.bottom + this.mouseYFrac * (this.camera.top - this.camera.bottom)
+      );
       this.renderer.render(this.scene, this.camera);
     }
 
-    window.addEventListener('mouseup', event => {
-      // this.zoomRectangle.hide()
-      this.renderer.render(this.scene, this.camera);
+    window.addEventListener('mouseup', (event: MouseEvent) => {
+      if (!dragZoom || event.button != 0) { // left click
+        return
+      }
+
+      // only zoom in when rectangle is large enough -> this prevents also the the normal left click interactions
+      // from zooming in...
+      if (this.zoomRectangle.width > 0.001 * Math.abs(this.camera.right - this.camera.left) &&
+        this.zoomRectangle.height > 0.001 * Math.abs(this.camera.top - this.camera.bottom)) {
+        const zoomRectBoundingRect = this.zoomRectangle.boundingRect;
+        this.updateCameraBoundingRect(
+          zoomRectBoundingRect.left,
+          zoomRectBoundingRect.right,
+          zoomRectBoundingRect.bottom,
+          zoomRectBoundingRect.top
+        );
+      }
+
       this.webglCanvas.nativeElement.removeEventListener('mousemove', zoomDrag)
+      this.zoomRectangle.hide()
+      this.renderer.render(this.scene, this.camera);
     })
   }
 
-  plotImage(imageArray, width, height) {
+  initRightClickInteraction() {
+    let dragging = false;
+    let clickX: number;
+    let clickY: number;
+    let cameraLeftStart: number;
+    let cameraRightStart: number;
+    let cameraBottomStart: number;
+    let cameraTopStart: number;
+
+
+    let preventDefault = (event: MouseEvent) => {
+      event.preventDefault();
+    }
+
+    //prevent context menu in Canvas
+    this.webglCanvas.nativeElement.addEventListener('contextmenu', preventDefault);
+
+    // single right click action, which should be prevented in case there is a double click
+    this.webglCanvas.nativeElement.addEventListener('mousedown', (event: MouseEvent) => {
+      if (event.button === 2) { // only right click
+        if (event.detail === 1) { // only for single clicks
+          window.addEventListener('mousemove', moveDrag);
+          window.addEventListener('contextmenu', preventDefault);
+          clickX = this.mouseXFrac;
+          clickY = this.mouseYFrac;
+          cameraLeftStart = this.camera.left;
+          cameraRightStart = this.camera.right;
+          cameraBottomStart = this.camera.bottom;
+          cameraTopStart = this.camera.top;
+        }
+      }
+    });
+
+    let moveDrag = (event: MouseEvent) => {
+      dragging = true;
+      const cameraWidth = this.camera.right - this.camera.left;
+      const cameraHeight = this.camera.top - this.camera.bottom;
+
+      const deltaX = (this.mouseXFrac - clickX) * cameraWidth;
+      const deltaY = (this.mouseYFrac - clickY) * cameraHeight;
+
+      this.updateCameraBoundingRect(
+        cameraLeftStart - deltaX,
+        cameraRightStart - deltaX,
+        cameraBottomStart - deltaY,
+        cameraTopStart - deltaY
+      );
+    };
+
+    window.addEventListener('mouseup', (event: MouseEvent) => {
+      if (event.button === 2) { // only right click
+        if (event.detail === 2) { // single click
+          if (!dragging) {
+            this.updateCameraBoundingRect(0, 1, 0, 1);
+          }
+        }
+        window.removeEventListener('mousemove', moveDrag);
+        dragging = false;
+      }
+    });
+
+    this.webglCanvas.nativeElement.addEventListener('mouseup', (event: MouseEvent) => {
+      if (event.button === 2) { // only right click
+        if (event.detail === 1) { // single click
+          if (!dragging) {
+            this.zoom(1.4);
+          }
+          window.removeEventListener('mousemove', moveDrag);
+          dragging = false;
+        }
+      }
+    });
+
+    window.addEventListener('click', () => {
+      window.removeEventListener('contextmenu', preventDefault);
+    })
+  }
+
+  zoom(factor: number) {
+    let currentWidth = this.camera.right - this.camera.left;
+    let currentHeight = this.camera.top - this.camera.bottom;
+    let newLeft = this.camera.left + this.mouseXFrac * currentWidth * (1 - factor);
+    let newRight = this.camera.right - (1 - this.mouseXFrac) * currentWidth * (1 - factor);
+    let newBottom = this.camera.bottom + this.mouseYFrac * currentHeight * (1 - factor);
+    let newTop = this.camera.top - (1 - this.mouseYFrac) * currentHeight * (1 - factor);
+    this.updateCameraBoundingRect(newLeft, newRight, newBottom, newTop);
+  }
+
+  updateCameraBoundingRect(left, right, bottom, top) {
+    this.camera.left = left;
+    this.camera.right = right;
+    this.camera.top = top;
+    this.camera.bottom = bottom;
+    this.camera.updateProjectionMatrix()
+    this.renderer.render(this.scene, this.camera);
+  }
+
+  isInsideBoundingRect(x, y, boundingRect) {
+    return x > boundingRect.x && x < boundingRect.x + boundingRect.width &&
+      y > boundingRect.y && y < boundingRect.y + boundingRect.height;
+  }
+
+  plotImage(imageArray: THREE.TypedArray, width: number, height: number) {
     this.imageTexture.dispose();
 
     this.imageTexture = new THREE.DataTexture(imageArray, width, height, THREE.RGBFormat);

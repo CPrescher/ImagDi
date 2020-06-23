@@ -55,6 +55,15 @@ export class BaseRectangle {
     this._updateGeometry();
   }
 
+  get boundingRect() {
+    return {
+      left: this.x,
+      right: this.x + this.width,
+      bottom: this.y,
+      top: this.y + this.height,
+    };
+  }
+
   moveTo(x: number, y: number) {
     this._x = x;
     this._y = y;
@@ -76,7 +85,6 @@ export class BaseRectangle {
     this._height = Math.abs(y2 - y1);
     this._updateGeometry()
   }
-
 
   _updateGeometry() {
 
@@ -110,11 +118,18 @@ export class Rectangle extends BaseRectangle {
     this.lineRectangle = new LineRectangle(scene, x, y, width, height);
   }
 
+  get width() {
+    return this._width;
+  }
 
   set width(val) {
     this._width = val;
     this.faceRectangle.width = val;
     this.lineRectangle.width = val;
+  }
+
+  get height() {
+    return this._height;
   }
 
   set height(val) {
@@ -137,12 +152,20 @@ export class Rectangle extends BaseRectangle {
 
   moveTo(x, y) {
     this.faceRectangle.moveTo(x, y);
-    this.lineRectangle.moveTo(x, y)
+    this.lineRectangle.moveTo(x, y);
+    this._x = this.faceRectangle.x;
+    this._y = this.faceRectangle.y
   }
 
   setBoundingRect(x1, y1, x2, y2) {
     this.faceRectangle.setBoundingRect(x1, y1, x2, y2);
     this.lineRectangle.setBoundingRect(x1, y1, x2, y2);
+    this._width = this.faceRectangle.width;
+    this._height = this.faceRectangle.height;
+  }
+
+  get boundingRect() {
+    return this.faceRectangle.boundingRect;
   }
 
   hide() {
@@ -176,6 +199,7 @@ export class FaceRectangle extends BaseRectangle {
 
     this.material = new THREE.MeshBasicMaterial({color: 0xDD0000, transparent: true, opacity: 0.4})
     this.mesh = new THREE.Mesh(this.geometry, this.material)
+    this.mesh.frustumCulled = false;
     this.scene.add(this.mesh);
     this.hidden = false;
   }
@@ -204,6 +228,7 @@ export class LineRectangle extends BaseRectangle {
     this._updateGeometry();
     this.material = new THREE.LineBasicMaterial({color: 0xffffff, linewidth: 0.5})
     this.mesh = new THREE.Line(this.geometry, this.material);
+    this.mesh.frustumCulled = false;
     this.scene.add(this.mesh);
     this.hidden = false;
   }
