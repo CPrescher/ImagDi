@@ -14,6 +14,7 @@ import Timeout = NodeJS.Timeout;
 export class WebglPlotComponent implements OnInit, AfterViewInit, OnDestroy {
   @ViewChild('webgl') webgl: ElementRef;
   @ViewChild('webglCanvas') webglCanvas: ElementRef;
+  @ViewChild('canvasContainer') canvasContainer: ElementRef;
 
   // all the three js variables:
   scene: THREE.Scene;
@@ -25,6 +26,7 @@ export class WebglPlotComponent implements OnInit, AfterViewInit, OnDestroy {
   imageMaterial: THREE.MeshBasicMaterial;
 
   zoomRectangle: Rectangle;
+  fixedAspectRatio = false;
 
   // mouse position variables
   mouseXpx: number; // screen pixel value over canvas
@@ -53,7 +55,8 @@ export class WebglPlotComponent implements OnInit, AfterViewInit, OnDestroy {
   ngAfterViewInit() {
     this.initTHREE();
     this.initMouseInteraction();
-    this.plotImage(this.dataService.createRandomImage(500, 500), 500, 500)
+    this.initResizeHandling();
+    this.plotImage(this.dataService.createRandomImage(2048, 2048), 2048, 2048)
     // this.whiteNoiseTV();
   }
 
@@ -62,11 +65,13 @@ export class WebglPlotComponent implements OnInit, AfterViewInit, OnDestroy {
     this.camera = new THREE.OrthographicCamera(0, 1, 1, 0, 0, 100000);
     this.camera.position.z = 10000;
     this.renderer = new THREE.WebGLRenderer({canvas: this.webglCanvas.nativeElement});
+    // this.renderer.setSize(this.webglCanvas.nativeElement.width, this.webglCanvas.nativeElement.height);
 
     this.initImagePlane()
     this.zoomRectangle = new Rectangle(this.scene, 0.1, 0.1, 0.4, 0.4);
     this.zoomRectangle.hide();
 
+    this.resize();
     this.renderer.render(this.scene, this.camera);
   }
 
@@ -248,6 +253,20 @@ export class WebglPlotComponent implements OnInit, AfterViewInit, OnDestroy {
     window.addEventListener('click', () => {
       window.removeEventListener('contextmenu', preventDefault);
     })
+  }
+
+  initResizeHandling() {
+    window.addEventListener('resize', () => this.resize())
+  }
+
+  resize() {
+    const boundingRect = this.canvasContainer.nativeElement.getBoundingClientRect();
+    const width = boundingRect.width;
+    const height = boundingRect.height;
+    this.renderer.setSize(20,20);
+    this.renderer.setSize(width, height);
+    this.renderer.render(this.scene, this.camera);
+
   }
 
   zoom(factor: number) {
