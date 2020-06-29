@@ -3,8 +3,7 @@ import { AfterViewInit, Component, ElementRef, OnDestroy, OnInit, ViewChild } fr
 import * as THREE from 'three';
 import { DataSourceService } from '../core/services';
 import { interval } from 'rxjs';
-import { FaceRectangle, LineRectangle, Rectangle } from './rectangle';
-import Timeout = NodeJS.Timeout;
+import { Rectangle } from './rectangle';
 
 @Component({
   selector: 'app-webgl-plot',
@@ -26,7 +25,9 @@ export class WebglPlotComponent implements OnInit, AfterViewInit, OnDestroy {
   imageMaterial: THREE.MeshBasicMaterial;
 
   zoomRectangle: Rectangle;
-  fixedAspectRatio = false;
+
+  fixedAspectRatio = true;
+  targetCameraBoundingRect = {left: 0, right: 1, bottom: 0, top: 1}
 
   // mouse position variables
   mouseXpx: number; // screen pixel value over canvas
@@ -56,8 +57,8 @@ export class WebglPlotComponent implements OnInit, AfterViewInit, OnDestroy {
     this.initTHREE();
     this.initMouseInteraction();
     this.initResizeHandling();
-    this.plotImage(this.dataService.createRandomImage(2048, 2048), 2048, 2048)
-    // this.whiteNoiseTV();
+    this.plotImage(this.dataService.createRandomImage(128, 128), 128, 128)
+    this.whiteNoiseTV();
   }
 
   initTHREE() {
@@ -128,7 +129,8 @@ export class WebglPlotComponent implements OnInit, AfterViewInit, OnDestroy {
     let dragZoom = false;
 
     this.webglCanvas.nativeElement.addEventListener('mousedown', event => {
-      if (event.button != 0) { // left click
+      if (event.button != 0 || // lef click only inside of webglCanvas
+        !this.isInsideBoundingRect(event.x, event.y, this.webglCanvas.nativeElement.getBoundingClientRect())) {
         return
       }
 
@@ -163,7 +165,7 @@ export class WebglPlotComponent implements OnInit, AfterViewInit, OnDestroy {
       if (this.zoomRectangle.width > 0.001 * Math.abs(this.camera.right - this.camera.left) &&
         this.zoomRectangle.height > 0.001 * Math.abs(this.camera.top - this.camera.bottom)) {
         const zoomRectBoundingRect = this.zoomRectangle.boundingRect;
-        this.updateCameraBoundingRect(
+        this.setCameraBoundingRect(
           zoomRectBoundingRect.left,
           zoomRectBoundingRect.right,
           zoomRectBoundingRect.bottom,
@@ -185,7 +187,6 @@ export class WebglPlotComponent implements OnInit, AfterViewInit, OnDestroy {
     let cameraRightStart: number;
     let cameraBottomStart: number;
     let cameraTopStart: number;
-
 
     let preventDefault = (event: MouseEvent) => {
       event.preventDefault();
@@ -218,7 +219,7 @@ export class WebglPlotComponent implements OnInit, AfterViewInit, OnDestroy {
       const deltaX = (this.mouseXFrac - clickX) * cameraWidth;
       const deltaY = (this.mouseYFrac - clickY) * cameraHeight;
 
-      this.updateCameraBoundingRect(
+      this.setCameraBoundingRect(
         cameraLeftStart - deltaX,
         cameraRightStart - deltaX,
         cameraBottomStart - deltaY,
@@ -230,7 +231,7 @@ export class WebglPlotComponent implements OnInit, AfterViewInit, OnDestroy {
       if (event.button === 2) { // only right click
         if (event.detail === 2) { // single click
           if (!dragging) {
-            this.updateCameraBoundingRect(0, 1, 0, 1);
+            this.setCameraBoundingRect(0, 1, 0, 1);
           }
         }
         window.removeEventListener('mousemove', moveDrag);
@@ -242,7 +243,7 @@ export class WebglPlotComponent implements OnInit, AfterViewInit, OnDestroy {
       if (event.button === 2) { // only right click
         if (event.detail === 1) { // single click
           if (!dragging) {
-            this.zoom(1.4);
+            this.zoom(1.7);
           }
           window.removeEventListener('mousemove', moveDrag);
           dragging = false;
@@ -260,13 +261,13 @@ export class WebglPlotComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   resize() {
-    const boundingRect = this.canvasContainer.nativeElement.getBoundingClientRect();
-    const width = boundingRect.width;
-    const height = boundingRect.height;
-    this.renderer.setSize(20,20);
-    this.renderer.setSize(width, height);
-    this.renderer.render(this.scene, this.camera);
-
+    // setTimeout( () => {
+        const boundingRect = this.canvasContainer.nativeElement.getBoundingClientRect();
+        const width = boundingRect.width;
+        const height = boundingRect.height;
+        this.renderer.setSize(width, height);
+        this.updateCameraBoundingRect();
+    // }, 20);
   }
 
   zoom(factor: number) {
@@ -276,16 +277,55 @@ export class WebglPlotComponent implements OnInit, AfterViewInit, OnDestroy {
     let newRight = this.camera.right - (1 - this.mouseXFrac) * currentWidth * (1 - factor);
     let newBottom = this.camera.bottom + this.mouseYFrac * currentHeight * (1 - factor);
     let newTop = this.camera.top - (1 - this.mouseYFrac) * currentHeight * (1 - factor);
-    this.updateCameraBoundingRect(newLeft, newRight, newBottom, newTop);
+    this.setCameraBoundingRect(newLeft, newRight, newBottom, newTop);
   }
 
-  updateCameraBoundingRect(left, right, bottom, top) {
+  setCameraBoundingRect(left: number, right: number, bottom: number, top: number, updateTargetBoundingRect = true) {
+    if (updateTargetBoundingRect) { // needs to be used for correct scaling when resizing the window
+      this.targetCameraBoundingRect.left = left;
+      this.targetCameraBoundingRect.right = right;
+      this.targetCameraBoundingRect.bottom = bottom;
+      this.targetCameraBoundingRect.top = top;
+    }
+
+    if (this.fixedAspectRatio) {
+      const newCameraWidth = right - left;
+      const newCameraHeight = top - bottom;
+      const canvasWidth = this.canvasContainer.nativeElement.getBoundingClientRect().width;
+      const canvasHeight = this.canvasContainer.nativeElement.getBoundingClientRect().height;
+
+      const canvasAspect = canvasWidth / canvasHeight;
+
+      if (newCameraWidth <= newCameraHeight) {
+        const centerX = left + newCameraWidth / 2;
+        const targetCameraWidth = canvasAspect * newCameraHeight;
+
+        left = centerX - targetCameraWidth / 2;
+        right = centerX + targetCameraWidth / 2;
+      } else {
+        const centerY = bottom + newCameraHeight / 2;
+        const targetCameraHeight = newCameraWidth / canvasAspect;
+
+        top = centerY + targetCameraHeight / 2;
+        bottom = centerY - targetCameraHeight / 2;
+      }
+    }
+
     this.camera.left = left;
     this.camera.right = right;
     this.camera.top = top;
     this.camera.bottom = bottom;
     this.camera.updateProjectionMatrix()
     this.renderer.render(this.scene, this.camera);
+  }
+
+  updateCameraBoundingRect() {
+    this.setCameraBoundingRect(
+      this.targetCameraBoundingRect.left,
+      this.targetCameraBoundingRect.right,
+      this.targetCameraBoundingRect.bottom,
+      this.targetCameraBoundingRect.top, false
+    );
   }
 
   isInsideBoundingRect(x, y, boundingRect) {
@@ -298,7 +338,7 @@ export class WebglPlotComponent implements OnInit, AfterViewInit, OnDestroy {
 
     this.imageTexture = new THREE.DataTexture(imageArray, width, height, THREE.RGBFormat);
     this.imageMaterial.map = this.imageTexture;
-    this.renderer.render(this.scene, this.camera);
+    this.updateCameraBoundingRect();
 
     this.imageWidth = width;
     this.imageHeight = height;

@@ -10,7 +10,7 @@
 .canvasContainer {
   flex: 1;
   position: relative;
-  background-color: black;
+  overflow: hidden;
 }
 
 .canvas {
