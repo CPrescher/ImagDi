@@ -18,6 +18,7 @@ export class D3PlotComponent implements OnInit, AfterViewInit {
   }
   width = 400;
   height = 400;
+  fixedAspectRatio = true;
 
   SVG;
   x;
@@ -136,11 +137,11 @@ export class D3PlotComponent implements OnInit, AfterViewInit {
       if (!extent) {
         // unzoom for left doubleclick
         if (!idleTimeout) return idleTimeout = setTimeout(idled, 350);
-        this.x.domain([0, this.imageWidth]);
-        this.y.domain([0, this.imageWidth]);
+
+        this.updateDomain(0, this.imageWidth, 0, this.imageHeight);
       } else {
-        this.x.domain([this.x.invert(extent[0][0]), this.x.invert(extent[1][0])])
-        this.y.domain([this.y.invert(extent[1][1]), this.y.invert(extent[0][1])])
+        this.updateDomain(this.x.invert(extent[0][0]), this.x.invert(extent[1][0]),
+          this.y.invert(extent[1][1]), this.y.invert(extent[0][1]))
         this.brushContext.select(".brush").call(brush.move, null) // this removes the grey brush area as soon as
         // the selection has been done
       }
@@ -202,9 +203,7 @@ export class D3PlotComponent implements OnInit, AfterViewInit {
       let newBottom = bottom + (mouseY - bottom) * factor
       let newTop = top - (top - mouseY) * factor;
 
-      this.x.domain([newLeft, newRight])
-      this.y.domain([newBottom, newTop])
-
+      this.updateDomain(newLeft, newRight, newBottom, newTop);
       this.update();
     }
 
@@ -252,9 +251,8 @@ export class D3PlotComponent implements OnInit, AfterViewInit {
       let deltaX = mouseX - dragMouseStartX;
       let deltaY = mouseY - dragMouseStartY;
 
-      this.x.domain([domainXDragStart[0] - deltaX, domainXDragStart[1] - deltaX]);
-      this.y.domain([domainYDragStart[0] - deltaY, domainYDragStart[1] - deltaY]);
-
+      this.updateDomain(domainXDragStart[0] - deltaX, domainXDragStart[1] - deltaX,
+        domainYDragStart[0] - deltaY, domainYDragStart[1] - deltaY);
       this.update(0);
 
       lastUpdate = Date.now();
@@ -269,6 +267,24 @@ export class D3PlotComponent implements OnInit, AfterViewInit {
     this.brushContext.on("mouseup", rightDragStop)
   }
 
+  updateDomain(left: number, right: number, bottom: number, top: number) {
+    if (this.fixedAspectRatio) {
+      let width = right - left;
+      let height = top - bottom;
+
+      if (width < height) {
+        let centerX = left + width/2
+        left = centerX - height/2
+        right = centerX + height/2
+      } else {
+        let centerY = bottom + height/2
+        bottom = centerY - width/2;
+        top = centerY + width/2
+      }
+    }
+    this.x.domain([left, right]);
+    this.y.domain([bottom, top]);
+  }
 
   update(duration = 500) {
     this.updateAxes(duration);
