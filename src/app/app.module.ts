@@ -19,6 +19,7 @@ import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 
 import { PlotlyViaWindowModule } from 'angular-plotly.js';
 import { WebglPlotComponent } from './webgl-plot/webgl-plot.component';
+import { D3PlotComponent } from './d3-plot/d3-plot.component';
 
 @NgModule({
   declarations: [
@@ -26,7 +27,8 @@ import { WebglPlotComponent } from './webgl-plot/webgl-plot.component';
     FileComponent,
     HeaderComponent,
     PlotComponent,
-    WebglPlotComponent
+    WebglPlotComponent,
+    D3PlotComponent
   ],
   imports: [
     BrowserModule,

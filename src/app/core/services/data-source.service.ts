@@ -92,6 +92,21 @@ export class DataSourceService {
     return data;
   }
 
+  createRandomImageBuffer(width, height) {
+    let buffer = new Uint8ClampedArray(height * width * 4)
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        let pos = (y * width + x) * 4;
+        let c = Math.floor(Math.random() * 150)
+        buffer[pos] = c;
+        buffer[pos + 1] = c;
+        buffer[pos + 2] = c;
+        buffer[pos + 3] = 255;
+      }
+    }
+    return buffer
+  }
+
   createOnes(rows, cols) {
     let result = new Array(rows);
     for (let r = 0; r < rows; r++) {
