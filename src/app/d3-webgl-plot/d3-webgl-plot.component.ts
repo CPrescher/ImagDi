@@ -1,14 +1,17 @@
 import { AfterViewInit, Component, OnInit } from '@angular/core';
 import { DataSourceService } from '../core/services';
-
 import * as d3 from 'd3';
+import * as THREE from 'three';
+import { Rectangle } from '../webgl-plot/rectangle';
+import Timeout = NodeJS.Timeout;
+import { interval } from 'rxjs';
 
 @Component({
-  selector: 'app-d3-plot',
-  templateUrl: './d3-plot.component.html',
-  styleUrls: ['./d3-plot.component.scss']
+  selector: 'app-d3-webgl-plot',
+  templateUrl: './d3-webgl-plot.component.html',
+  styleUrls: ['./d3-webgl-plot.component.scss']
 })
-export class D3PlotComponent implements OnInit, AfterViewInit {
+export class D3WebglPlotComponent implements OnInit, AfterViewInit {
 
   imageWidth = 2048;
   imageHeight = 2048;
@@ -30,12 +33,21 @@ export class D3PlotComponent implements OnInit, AfterViewInit {
 
   canvas;
   canvasContext;
-  imageData;
+  webGlCanvas;
+  foreignObject;
+  scene;
+  camera;
+  renderer;
+
+  imageGeometry;
+  imageTexture;
+  imageMaterial;
 
   brushContext;
 
   mouseX;
   mouseY;
+  sub;
 
   constructor(private dataService: DataSourceService) {
   }
@@ -46,12 +58,16 @@ export class D3PlotComponent implements OnInit, AfterViewInit {
   ngAfterViewInit() {
     this.initSVG();
     this.initAxes();
+    this.initImage();
     this.initClip();
-    this.initImage(this.dataService.createRandomImageBuffer(this.imageWidth, this.imageHeight));
     this.initBrush();
     this.initMousePosition();
     this.initWheel();
     this.initDrag();
+
+    this.plotImage(this.dataService.createRandomImage(256, 256), 256, 256)
+
+    // this.whiteNoiseTV()
   }
 
   initSVG() {
@@ -94,21 +110,65 @@ export class D3PlotComponent implements OnInit, AfterViewInit {
       .attr("height", this.height)
   }
 
-  initImage(imgBuffer: Uint8ClampedArray) {
-    this.canvas = document.createElement("canvas");
-    this.canvas.width = this.imageWidth;
-    this.canvas.height = this.imageHeight;
-    this.canvasContext = this.canvas.getContext('2d');
+  initImage() {
+    this.initCanvas();
+    this.initTHREE();
+    // this.initSVGImage();
+  }
 
-    this.imageData = this.canvasContext.createImageData(this.imageWidth, this.imageHeight);
-    this.imageData.data.set(imgBuffer)
-    this.canvasContext.putImageData(this.imageData, 0, 0);
-    let canvasUrl = this.canvas.toDataURL("image/png");
+  initCanvas() {
+    // this.canvas = document.createElement("canvas");
+    // this.canvas.width = this.imageWidth;
+    // this.canvas.height = this.imageHeight;
+    // this.canvasContext = this.canvas.getContext('webgl');
 
+    this.foreignObject = this.SVG.append('foreignObject')
+      .attr("clip-path", "url(#clip)")
+      .style('position', 'relative')
+      .style('z-index', "-1")
+      .attr("height", this.imageHeight)
+      .attr("width", this.imageWidth)
+      .attr("x", 0)
+      .attr("y", 0)
+
+    this.webGlCanvas = this.foreignObject
+      .append("xhtml:canvas")
+      .attr("id", 'webglCanvas')
+      .attr("height", this.imageHeight)
+      .attr("width", this.imageWidth)
+      .attr("x", 0)
+      .attr("y", 0)
+
+    this.canvas = document.getElementById('webglCanvas')
+    this.canvasContext = this.canvas.getContext('webgl');
+
+  }
+
+  initTHREE() {
+    this.scene = new THREE.Scene();
+    this.camera = new THREE.OrthographicCamera(0, 1, 1, 0, 0, 100000);
+    this.camera.position.z = 10000;
+    this.renderer = new THREE.WebGLRenderer({canvas: this.canvas});
+
+    this.initImagePlane()
+    this.renderer.render(this.scene, this.camera);
+  }
+
+  initImagePlane() {
+    this.imageGeometry = new THREE.PlaneGeometry(1, 1);
+    this.imageTexture = new THREE.DataTexture(new Uint8Array([0, 0, 0]), 1, 1, THREE.RGBFormat)
+    this.imageMaterial = new THREE.MeshBasicMaterial({map: this.imageTexture});
+    let plane = new THREE.Mesh(this.imageGeometry, this.imageMaterial);
+    plane.position.x = 0.5;
+    plane.position.y = 0.5;
+    this.scene.add(plane);
+  }
+
+  initSVGImage() {
     this.SVG.append("image")
       .attr("id", "image")
       .attr("clip-path", "url(#clip)")
-      .datum(canvasUrl)
+      .datum(this.canvas.toDataURL("image/png"))
       .attr("preserveAspectRatio", "none")
       .attr("image-rendering", "pixelated")
       .attr("xlink:href", (d) => {
@@ -126,7 +186,7 @@ export class D3PlotComponent implements OnInit, AfterViewInit {
       .attr("class", "brushContext")
 
 
-    let idleTimeout
+    let idleTimeout: Timeout;
 
     function idled() {
       idleTimeout = null
@@ -251,7 +311,7 @@ export class D3PlotComponent implements OnInit, AfterViewInit {
       let deltaX = mouseX - dragMouseStartX;
       let deltaY = mouseY - dragMouseStartY;
 
-      this.updateDomain(left - deltaX, right - deltaX, domainYDragStart[0] - deltaY, domainYDragStart[1] - deltaY);
+      this.updateDomain(left - deltaX, right - deltaX, bottom - deltaY, top - deltaY);
       this.update(0);
 
       lastUpdate = Date.now();
@@ -272,13 +332,13 @@ export class D3PlotComponent implements OnInit, AfterViewInit {
       let height = top - bottom;
 
       if (width < height) {
-        let centerX = left + width/2
-        left = centerX - height/2
-        right = centerX + height/2
+        let centerX = left + width / 2
+        left = centerX - height / 2
+        right = centerX + height / 2
       } else {
-        let centerY = bottom + height/2
-        bottom = centerY - width/2;
-        top = centerY + width/2
+        let centerY = bottom + height / 2
+        bottom = centerY - width / 2;
+        top = centerY + width / 2
       }
     }
     this.x.domain([left, right]);
@@ -308,12 +368,66 @@ export class D3PlotComponent implements OnInit, AfterViewInit {
     let newHeight = this.height * this.imageHeight / (top - bottom)
     let newTop = (top + 0.5) / this.imageHeight * newHeight - newHeight
 
-    this.SVG.select('#image')
+    // this.SVG.select('#image')
+    //   .transition().duration(duration)
+    //   .attr("clip-path", "url(#clip)")
+    //   .attr("x", newLeft)
+    //   .attr("y", newTop)
+    //   .attr("width", newWidth)
+    //   .attr("height", newHeight)
+
+    this.foreignObject
       .transition().duration(duration)
-      .attr("clip-path", "url(#clip)")
       .attr("x", newLeft)
       .attr("y", newTop)
       .attr("width", newWidth)
       .attr("height", newHeight)
+
+    this.webGlCanvas
+      .transition().duration(duration)
+      .attr("x", newLeft)
+      .attr("y", newTop)
+      .attr("width", newWidth)
+      .attr("height", newHeight)
+
+  }
+
+  plotImage(imageArray: THREE.TypedArray, width: number, height: number) {
+    this.imageTexture.dispose();
+
+    this.imageTexture = new THREE.DataTexture(imageArray, width, height, THREE.RGBFormat);
+    this.imageMaterial.map = this.imageTexture;
+
+    this.imageWidth = width;
+    this.imageHeight = height;
+    this.renderer.render(this.scene, this.camera);
+
+
+    this.canvasContext = this.canvas.getContext('webgl');
+
+    // let canvasUrl = this.canvas.toDataURL("image/png")
+    //
+    //
+    // this.SVG.select("#image")
+    //   .datum(canvasUrl)
+    //   .attr("xlink:href", (d) => {
+    //     return d
+    //   })
+  }
+
+  whiteNoiseTV() {
+    let width = 2048;
+    let height = width;
+
+    const num_images = 10;
+
+    let random_images = new Array(num_images);
+    for (let i = 0; i < num_images; i++) {
+      random_images[i] = this.dataService.createRandomImage(width, height)
+    }
+
+    this.sub = interval(1).subscribe(() => {
+      this.plotImage(random_images[Math.floor(Math.random() * num_images)], width, height)
+    })
   }
 }
