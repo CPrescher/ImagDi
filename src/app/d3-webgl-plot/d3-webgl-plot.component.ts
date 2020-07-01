@@ -65,7 +65,8 @@ export class D3WebglPlotComponent implements OnInit, AfterViewInit {
     this.initWheel();
     this.initDrag();
 
-    this.plotImage(this.dataService.createRandomImage(256, 256), 256, 256)
+    this.plotImage(this.dataService.createRandomImage(this.imageWidth, this.imageHeight),
+      this.imageWidth, this.imageHeight)
 
     // this.whiteNoiseTV()
   }
@@ -113,29 +114,23 @@ export class D3WebglPlotComponent implements OnInit, AfterViewInit {
   initImage() {
     this.initCanvas();
     this.initTHREE();
-    // this.initSVGImage();
   }
 
   initCanvas() {
-    // this.canvas = document.createElement("canvas");
-    // this.canvas.width = this.imageWidth;
-    // this.canvas.height = this.imageHeight;
-    // this.canvasContext = this.canvas.getContext('webgl');
-
     this.foreignObject = this.SVG.append('foreignObject')
       .attr("clip-path", "url(#clip)")
       .style('position', 'relative')
       .style('z-index', "-1")
-      .attr("height", this.imageHeight)
-      .attr("width", this.imageWidth)
+      .attr("height", this.width)
+      .attr("width", this.height)
       .attr("x", 0)
       .attr("y", 0)
 
     this.webGlCanvas = this.foreignObject
       .append("xhtml:canvas")
       .attr("id", 'webglCanvas')
-      .attr("height", this.imageHeight)
-      .attr("width", this.imageWidth)
+      .attr("height", this.width)
+      .attr("width", this.height)
       .attr("x", 0)
       .attr("y", 0)
 
@@ -162,22 +157,6 @@ export class D3WebglPlotComponent implements OnInit, AfterViewInit {
     plane.position.x = 0.5;
     plane.position.y = 0.5;
     this.scene.add(plane);
-  }
-
-  initSVGImage() {
-    this.SVG.append("image")
-      .attr("id", "image")
-      .attr("clip-path", "url(#clip)")
-      .datum(this.canvas.toDataURL("image/png"))
-      .attr("preserveAspectRatio", "none")
-      .attr("image-rendering", "pixelated")
-      .attr("xlink:href", (d) => {
-        return d
-      })
-      .attr("x", 0.5)
-      .attr("y", -0.5)
-      .attr("height", this.height)
-      .attr("width", this.width)
   }
 
   initBrush() {
@@ -362,33 +341,13 @@ export class D3WebglPlotComponent implements OnInit, AfterViewInit {
     let bottom = this.y.domain()[0]
     let top = this.y.domain()[1]
 
-    let newWidth = this.width * this.imageWidth / (right - left);
-    let newLeft = -(left + 0.5) / this.imageWidth * newWidth
+    this.camera.left = left / this.imageWidth
+    this.camera.right = right / this.imageWidth
+    this.camera.bottom = bottom / this.imageHeight
+    this.camera.top = top / this.imageHeight
 
-    let newHeight = this.height * this.imageHeight / (top - bottom)
-    let newTop = (top + 0.5) / this.imageHeight * newHeight - newHeight
-
-    // this.SVG.select('#image')
-    //   .transition().duration(duration)
-    //   .attr("clip-path", "url(#clip)")
-    //   .attr("x", newLeft)
-    //   .attr("y", newTop)
-    //   .attr("width", newWidth)
-    //   .attr("height", newHeight)
-
-    this.foreignObject
-      .transition().duration(duration)
-      .attr("x", newLeft)
-      .attr("y", newTop)
-      .attr("width", newWidth)
-      .attr("height", newHeight)
-
-    this.webGlCanvas
-      .transition().duration(duration)
-      .attr("x", newLeft)
-      .attr("y", newTop)
-      .attr("width", newWidth)
-      .attr("height", newHeight)
+    this.camera.updateProjectionMatrix()
+    this.renderer.render(this.scene, this.camera)
 
   }
 
@@ -404,15 +363,6 @@ export class D3WebglPlotComponent implements OnInit, AfterViewInit {
 
 
     this.canvasContext = this.canvas.getContext('webgl');
-
-    // let canvasUrl = this.canvas.toDataURL("image/png")
-    //
-    //
-    // this.SVG.select("#image")
-    //   .datum(canvasUrl)
-    //   .attr("xlink:href", (d) => {
-    //     return d
-    //   })
   }
 
   whiteNoiseTV() {
