@@ -9,7 +9,7 @@ export class ImagePlot {
   imageHeight = 256;
 
   margin = {
-    top: 10, right: 30, bottom: 30, left: 60
+    top: 10, right: 10, bottom: 30, left: 60
   }
   width = 400;
   height = 400;
@@ -46,25 +46,60 @@ export class ImagePlot {
   private brushContext;
 
   constructor(selector: string) {
-    this.initImagePlot(selector);
+    this._initImagePlot(selector);
     this.histogram = new ImageHistogram(selector);
     this.colorScale = d3.scaleSequential(d3.interpolateInferno)
       .domain([0, 65000])
   }
 
-  initImagePlot(selector) {
-    this.initSVG(selector);
-    this.initAxes();
-    this.initImage();
-    this.initClip();
-    this.initBrush();
-    this.initMousePosition();
-    this.initWheel();
-    this.initRightClickBehavior();
-
+  plotImage(imageArray, width, height) {
+    let colorImageArray = new Uint8ClampedArray(imageArray.length * 3)
+    let pos = 0;
+    let c: any;
+    for (let i = 0; i < imageArray.length; i++) {
+      c = this.hexToRgb(this.colorScale(imageArray[i]))
+      pos = i * 3;
+      colorImageArray[pos] = c[0];
+      colorImageArray[pos + 1] = c[1];
+      colorImageArray[pos + 2] = c[2];
+    }
+    this._updateTexture(colorImageArray, width, height);
+    this.histogram.updateImage(imageArray);
   }
 
-  initSVG(selector: string) {
+  zoom(factor: number) {
+    let currentWidth = this.x.domain()[1] - this.x.domain()[0]
+    let currentHeight = this.y.domain()[1] - this.y.domain()[0]
+    let mouseXFrac = (this.mouseX - this.x.domain()[0]) / currentWidth
+    let mouseYFrac = (this.mouseY - this.y.domain()[0]) / currentHeight
+    let newLeft = this.x.domain()[0] - mouseXFrac * currentWidth * factor;
+    let newRight = this.x.domain()[1] + (1 - mouseXFrac) * currentWidth * factor;
+    let newBottom = this.y.domain()[0] - mouseYFrac * currentHeight * factor;
+    let newTop = this.y.domain()[1] + (1 - mouseYFrac) * currentHeight * factor;
+    this._updateDomain(newLeft, newRight, newBottom, newTop);
+    this._update();
+  }
+
+  hexToRgb(hex) {
+    let bigint = parseInt(hex.substr(1), 16);
+    let r = (bigint >> 16) & 255;
+    let g = (bigint >> 8) & 255;
+    let b = bigint & 255;
+    return [r, g, b]
+  }
+
+  _initImagePlot(selector) {
+    this._initSVG(selector);
+    this._initAxes();
+    this._initImage();
+    this._initClip();
+    this._initBrush();
+    this._initMousePosition();
+    this._initWheel();
+    this._initRightClickBehavior();
+  }
+
+  _initSVG(selector: string) {
     this.SVG = d3.select(selector)
       .append("svg")
       .attr("width", this.width + this.margin.left + this.margin.right)
@@ -76,7 +111,7 @@ export class ImagePlot {
       })
   }
 
-  initAxes() {
+  _initAxes() {
     this.x = d3.scaleLinear()
       .domain([0, this.imageWidth])
       .range([0, this.width])
@@ -94,7 +129,7 @@ export class ImagePlot {
       .call(d3.axisLeft(this.y));
   }
 
-  initClip() {
+  _initClip() {
     this.clip = this.SVG.append("clipPath")
       .attr("id", "clip")
       .append("rect")
@@ -104,12 +139,12 @@ export class ImagePlot {
       .attr("height", this.height)
   }
 
-  initImage() {
-    this.initCanvas();
-    this.initTHREE();
+  _initImage() {
+    this._initCanvas();
+    this._initTHREE();
   }
 
-  initCanvas() {
+  _initCanvas() {
     this.foreignObject = this.SVG.append('foreignObject')
       .attr("clip-path", "url(#clip)")
       .style('position', 'relative')
@@ -132,17 +167,17 @@ export class ImagePlot {
 
   }
 
-  initTHREE() {
+  _initTHREE() {
     this.scene = new THREE.Scene();
     this.camera = new THREE.OrthographicCamera(0, 1, 1, 0, 0, 100000);
     this.camera.position.z = 10000;
     this.renderer = new THREE.WebGLRenderer({canvas: this.canvas});
 
-    this.initImagePlane()
+    this._initImagePlane()
     this.renderer.render(this.scene, this.camera);
   }
 
-  initImagePlane() {
+  _initImagePlane() {
     this.imageGeometry = new THREE.PlaneGeometry(1, 1);
     this.imageTexture = new THREE.DataTexture(new Uint8Array([0, 0, 0]), 1, 1, THREE.RGBFormat)
     this.imageMaterial = new THREE.MeshBasicMaterial({map: this.imageTexture});
@@ -152,7 +187,7 @@ export class ImagePlot {
     this.scene.add(plane);
   }
 
-  initBrush() {
+  _initBrush() {
     this.brushContext = this.SVG.append("g")
       .attr("id", "brushContext")
       .attr("class", "brushContext")
@@ -160,12 +195,12 @@ export class ImagePlot {
     let updateChartBrush = () => {
       let extent = d3.event.selection
       if (extent) {
-        this.updateDomain(this.x.invert(extent[0][0]), this.x.invert(extent[1][0]),
+        this._updateDomain(this.x.invert(extent[0][0]), this.x.invert(extent[1][0]),
           this.y.invert(extent[1][1]), this.y.invert(extent[0][1]))
         this.brushContext.select(".brush").call(brush.move, null) // this removes the grey brush area as soon as
         // the selection has been done
       }
-      this.update();
+      this._update();
     }
 
     // add brushing
@@ -179,7 +214,7 @@ export class ImagePlot {
 
   }
 
-  initMousePosition() {
+  _initMousePosition() {
     let updateMousePosition = () => {
       let left = this.x.domain()[0]
       let right = this.x.domain()[1]
@@ -199,7 +234,7 @@ export class ImagePlot {
     this.brushContext.on("mousemove", updateMousePosition)
   }
 
-  initWheel() {
+  _initWheel() {
 
     let wheelUpdate = () => {
       let left = this.x.domain()[0]
@@ -223,14 +258,14 @@ export class ImagePlot {
       let newBottom = bottom + (mouseY - bottom) * factor
       let newTop = top - (top - mouseY) * factor;
 
-      this.updateDomain(newLeft, newRight, newBottom, newTop);
-      this.update();
+      this._updateDomain(newLeft, newRight, newBottom, newTop);
+      this._update();
     }
 
     this.brushContext.on("wheel", wheelUpdate)
   }
 
-  initRightClickBehavior() {
+  _initRightClickBehavior() {
     let dragMouseStartX: number;
     let dragMouseStartY: number;
     let domainXDragStart: Array<number>;
@@ -279,8 +314,8 @@ export class ImagePlot {
       let deltaX = mouseX - dragMouseStartX;
       let deltaY = mouseY - dragMouseStartY;
 
-      this.updateDomain(left - deltaX, right - deltaX, bottom - deltaY, top - deltaY);
-      this.update(0);
+      this._updateDomain(left - deltaX, right - deltaX, bottom - deltaY, top - deltaY);
+      this._update(0);
 
       lastUpdate = Date.now();
     }
@@ -292,8 +327,8 @@ export class ImagePlot {
           if (event.detail === 1) { // single click
             this.zoom(1.7);
           } else { //double click
-            this.updateDomain(0, this.imageWidth, 0, this.imageHeight);
-            this.update();
+            this._updateDomain(0, this.imageWidth, 0, this.imageHeight);
+            this._update();
           }
         }
         let brushContext = document.getElementById("brushContext");
@@ -306,20 +341,7 @@ export class ImagePlot {
     this.brushContext.on("mouseup", rightDragStop)
   }
 
-  zoom(factor: number) {
-    let currentWidth = this.x.domain()[1] - this.x.domain()[0]
-    let currentHeight = this.y.domain()[1] - this.y.domain()[0]
-    let mouseXFrac = (this.mouseX - this.x.domain()[0]) / currentWidth
-    let mouseYFrac = (this.mouseY - this.y.domain()[0]) / currentHeight
-    let newLeft = this.x.domain()[0] - mouseXFrac * currentWidth * factor;
-    let newRight = this.x.domain()[1] + (1 - mouseXFrac) * currentWidth * factor;
-    let newBottom = this.y.domain()[0] - mouseYFrac * currentHeight * factor;
-    let newTop = this.y.domain()[1] + (1 - mouseYFrac) * currentHeight * factor;
-    this.updateDomain(newLeft, newRight, newBottom, newTop);
-    this.update();
-  }
-
-  updateDomain(left: number, right: number, bottom: number, top: number) {
+  _updateDomain(left: number, right: number, bottom: number, top: number) {
     if (this.fixedAspectRatio) {
       let width = right - left;
       let height = top - bottom;
@@ -338,18 +360,18 @@ export class ImagePlot {
     this.y.domain([bottom, top]);
   }
 
-  update(duration = 500) {
-    this.updateAxes(duration);
-    this.updateCamera();
+  _update(duration = 500) {
+    this._updateAxes(duration);
+    this._updateCamera();
     // this.updateData();
   }
 
-  updateAxes(duration = 500) {
+  _updateAxes(duration = 500) {
     this.xAxis.transition().duration(duration).call(d3.axisBottom(this.x))
     this.yAxis.transition().duration(duration).call(d3.axisLeft(this.y))
   }
 
-  updateCamera() {
+  _updateCamera() {
     let left = this.x.domain()[0]
     let right = this.x.domain()[1]
     let bottom = this.y.domain()[0]
@@ -363,20 +385,6 @@ export class ImagePlot {
     this.camera.updateProjectionMatrix()
     this.renderer.render(this.scene, this.camera)
 
-  }
-
-  plotImage(imageArray, width, height) {
-    let colorImageArray = new Uint8ClampedArray(imageArray.length * 3)
-    let pos = 0;
-    let c: any;
-    for (let i = 0; i < imageArray.length; i++) {
-      c = this.hexToRgb(this.colorScale(imageArray[i]))
-      pos = i * 3;
-      colorImageArray[pos] = c[0];//#[];
-      colorImageArray[pos + 1] = c[1]//[1]
-      colorImageArray[pos + 2] = c[2]//[2]
-    }
-    this._updateTexture(colorImageArray, width, height);
   }
 
   _updateTexture(imageArray: THREE.TypedArray, width: number, height: number) {
@@ -393,11 +401,4 @@ export class ImagePlot {
   }
 
 
-  hexToRgb(hex) {
-    let bigint = parseInt(hex.substr(1), 16);
-    let r = (bigint >> 16) & 255;
-    let g = (bigint >> 8) & 255;
-    let b = bigint & 255;
-    return [r, g, b]
-  }
 }

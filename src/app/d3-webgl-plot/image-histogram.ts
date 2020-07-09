@@ -2,7 +2,7 @@ import * as d3 from 'd3';
 
 export class ImageHistogram {
   margin = {
-    top: 10, right: 30, bottom: 30, left: 60
+    top: 10, right: 30, bottom: 30, left: 20, between: 10,
   }
   width = 100;
   height = 400;
@@ -12,6 +12,9 @@ export class ImageHistogram {
   xAxis;
   y;
   yAxis;
+
+  hist;
+  histLine;
   private clip;
 
   constructor(private selector: string) {
@@ -23,7 +26,7 @@ export class ImageHistogram {
   initPlot() {
     this.histPlot = d3.select(this.selector)
       .append("svg")
-      .attr("width", this.width + this.margin.left)
+      .attr("width", this.width/2 + this.margin.left)
       .attr("height", this.height + this.margin.top + this.margin.bottom)
       .append("g")
       .attr("transform", "translate(" + this.margin.left + "," + this.margin.top + ")")
@@ -34,17 +37,17 @@ export class ImageHistogram {
   }
 
   initAxes() {
-    this.x = d3.scaleLinear()
-      .domain([0, 100])
-      .range([0, this.width])
+    this.x = d3.scaleLog()
+      .domain([1e-10, 100])
+      .range([0, this.width/2])
 
     this.xAxis = this.histPlot.append("g")
       .attr("transform", "translate(0, " + this.height + ")")
       .call(d3.axisBottom(this.x));
 
     // add Y Axis
-    this.y = d3.scaleLinear()
-      .domain([0, 100])
+    this.y = d3.scaleLog()
+      .domain([1e-10, 100])
       .range([this.height, 0])
 
     this.yAxis = this.histPlot.append("g")
@@ -54,10 +57,10 @@ export class ImageHistogram {
   initColorBar() {
     this.colorScaleBar = d3.select(this.selector)
       .append("svg")
-      .attr("width", this.width / 2 + this.margin.right)
+      .attr("width", this.width / 2 + this.margin.right - this.margin.between / 2)
       .attr("height", this.height + this.margin.top + this.margin.bottom)
       .append("g")
-      .attr("transform", "translate( 0," + this.margin.top + ")")
+      .attr("transform", "translate(" + this.margin.between + "," + this.margin.top + ")")
       .attr("width", this.width / 2)
       .on("contextmenu", () => {
         d3.event.preventDefault();
@@ -85,7 +88,7 @@ export class ImageHistogram {
 
   }
 
-  hist(imageData, bins: number) {
+  calculateHistogram(imageData, bins: number) {
     // find minimum and maximum
     let min = Infinity;
     let max = -Infinity;
@@ -93,7 +96,6 @@ export class ImageHistogram {
       if (item < min) min = item;
       else if (item > max) max = item;
     }
-    max += 0.0001 * (max - min); // to avoid missing values at border
 
     // get histogram
     const binSize = (max - min) / bins;
@@ -117,5 +119,61 @@ export class ImageHistogram {
       max: max,
       binSize: binSize
     };
+  }
+
+  updateImage(imageData) {
+    this.hist = this.calculateHistogram(imageData, 5000);
+    this.plotHistogram();
+  }
+
+  plotHistogram() {
+
+    const xy = [];
+    for (let i = 0; i < this.hist.data.length; i++) {
+      xy.push({x: this.hist.binCenters[i], y: this.hist.data[i]})
+    }
+    this.x.domain([d3.min(this.hist.data), d3.max(this.hist.data)]);
+    this.y.domain([d3.min(this.hist.binCenters), this.hist.max]);
+    this._updateAxes();
+
+    this.histLine = d3.line()
+      .x((d: any) => {
+        return this.x(d.y);
+      })
+      .y((d: any) => {
+        return this.y(d.x);
+      });
+
+
+    //Create line
+    this.histPlot.append("path")
+      .datum(xy)
+      .attr("class", "line")
+      .attr("d", this.histLine)
+      .attr("fill", "none")
+      .attr("stroke", "black")
+      .attr("stroke-width", 1)
+
+
+  }
+
+  _updateAxes(duration = 500) {
+    this.xAxis
+      .transition()
+      .duration(duration)
+      .call(
+        d3.axisBottom(this.x)
+          .ticks(1000)
+          .tickFormat(() => "")
+      )
+    this.yAxis
+      .transition()
+      .duration(duration)
+      .call(
+        d3.axisLeft(this.y)
+          .ticks(20)
+          .tickFormat(() => "")
+      )
+
   }
 }
