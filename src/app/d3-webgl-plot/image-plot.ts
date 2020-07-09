@@ -2,6 +2,7 @@ import * as d3 from 'd3';
 import * as THREE from 'three';
 
 import Timeout = NodeJS.Timeout;
+import { ImageHistogram } from './image-histogram';
 
 export class ImagePlot {
   imageWidth = 256;
@@ -44,14 +45,11 @@ export class ImagePlot {
 
   private brushContext;
 
-
   constructor(selector: string) {
     this.initImagePlot(selector);
-    this.histogram = new ImageHistogram(selector, this);
+    this.histogram = new ImageHistogram(selector);
     this.colorScale = d3.scaleSequential(d3.interpolateInferno)
       .domain([0, 65000])
-
-    console.log(this.hexToRgb(this.colorScale(5000)));
   }
 
   initImagePlot(selector) {
@@ -314,9 +312,9 @@ export class ImagePlot {
     let mouseXFrac = (this.mouseX - this.x.domain()[0]) / currentWidth
     let mouseYFrac = (this.mouseY - this.y.domain()[0]) / currentHeight
     let newLeft = this.x.domain()[0] - mouseXFrac * currentWidth * factor;
-    let newRight = this.x.domain()[1] + (1-mouseXFrac) * currentWidth * factor;
+    let newRight = this.x.domain()[1] + (1 - mouseXFrac) * currentWidth * factor;
     let newBottom = this.y.domain()[0] - mouseYFrac * currentHeight * factor;
-    let newTop = this.y.domain()[1] + (1-mouseYFrac) * currentHeight * factor;
+    let newTop = this.y.domain()[1] + (1 - mouseYFrac) * currentHeight * factor;
     this.updateDomain(newLeft, newRight, newBottom, newTop);
     this.update();
   }
@@ -402,91 +400,4 @@ export class ImagePlot {
     let b = bigint & 255;
     return [r, g, b]
   }
-}
-
-export class ImageHistogram {
-  margin = {
-    top: 10, right: 30, bottom: 30, left: 60
-  }
-  width = 100;
-  height = 400;
-  histPlot;
-  colorScaleBar;
-  x;
-  xAxis;
-  y;
-  yAxis;
-  private clip;
-
-  constructor(private selector: string, private imagePlot: ImagePlot) {
-    this.initPlot();
-    this.initAxes();
-    this.initColorBar();
-  }
-
-  initPlot() {
-    this.histPlot = d3.select(this.selector)
-      .append("svg")
-      .attr("width", this.width + this.margin.left)
-      .attr("height", this.height + this.margin.top + this.margin.bottom)
-      .append("g")
-      .attr("transform", "translate(" + this.margin.left + "," + this.margin.top + ")")
-      .attr("width", this.width / 2)
-      .on("contextmenu", () => {
-        d3.event.preventDefault();
-      })
-  }
-
-  initAxes() {
-    this.x = d3.scaleLinear()
-      .domain([0, 100])
-      .range([0, this.width])
-
-    this.xAxis = this.histPlot.append("g")
-      .attr("transform", "translate(0, " + this.height + ")")
-      .call(d3.axisBottom(this.x));
-
-    // add Y Axis
-    this.y = d3.scaleLinear()
-      .domain([0, 100])
-      .range([this.height, 0])
-
-    this.yAxis = this.histPlot.append("g")
-      .call(d3.axisLeft(this.y));
-  }
-
-  initColorBar() {
-    this.colorScaleBar = d3.select(this.selector)
-      .append("svg")
-      .attr("width", this.width / 2 + this.margin.right)
-      .attr("height", this.height + this.margin.top + this.margin.bottom)
-      .append("g")
-      .attr("transform", "translate( 0," + this.margin.top + ")")
-      .attr("width", this.width / 2)
-      .on("contextmenu", () => {
-        d3.event.preventDefault();
-      })
-
-    let colorScale = d3.scaleSequential(d3.interpolateInferno)
-      .domain([0, this.height])
-
-    let bars = this.colorScaleBar.selectAll(".bars")
-      .data(d3.range(this.height), function (d) {
-        return d;
-      })
-      .enter().append("rect")
-      .attr("class", "bars")
-      .attr("y", function (d, i) {
-        return i;
-      })
-      .attr("x", 0)
-      .attr("height", 1)
-      .attr("width", this.width / 2)
-      .style("fill", function (d, i) {
-        return colorScale(d)
-      })
-
-
-  }
-
 }
