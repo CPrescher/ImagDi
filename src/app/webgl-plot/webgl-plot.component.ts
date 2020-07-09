@@ -229,7 +229,7 @@ export class WebglPlotComponent implements OnInit, AfterViewInit, OnDestroy {
 
     window.addEventListener('mouseup', (event: MouseEvent) => {
       if (event.button === 2) { // only right click
-        if (event.detail === 2) { // single click
+        if (event.detail === 2) { // double click
           if (!dragging) {
             this.setCameraBoundingRect(0, 1, 0, 1);
           }

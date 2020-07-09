@@ -62,7 +62,7 @@ export class ImagePlot {
     this.initBrush();
     this.initMousePosition();
     this.initWheel();
-    this.initDrag();
+    this.initRightClickBehavior();
 
   }
 
@@ -159,21 +159,9 @@ export class ImagePlot {
       .attr("id", "brushContext")
       .attr("class", "brushContext")
 
-
-    let idleTimeout: Timeout;
-
-    function idled() {
-      idleTimeout = null
-    }
-
     let updateChartBrush = () => {
       let extent = d3.event.selection
-      if (!extent) {
-        // unzoom for left doubleclick
-        if (!idleTimeout) return idleTimeout = setTimeout(idled, 350);
-
-        this.updateDomain(0, this.imageWidth, 0, this.imageHeight);
-      } else {
+      if (extent) {
         this.updateDomain(this.x.invert(extent[0][0]), this.x.invert(extent[1][0]),
           this.y.invert(extent[1][1]), this.y.invert(extent[0][1]))
         this.brushContext.select(".brush").call(brush.move, null) // this removes the grey brush area as soon as
@@ -244,19 +232,25 @@ export class ImagePlot {
     this.brushContext.on("wheel", wheelUpdate)
   }
 
-  initDrag() {
+  initRightClickBehavior() {
     let dragMouseStartX: number;
     let dragMouseStartY: number;
     let domainXDragStart: Array<number>;
     let domainYDragStart: Array<number>;
+    let dragging = false;
 
     let rightDragStart = () => {
-      let brushContext = document.getElementById("brushContext");
-      dragMouseStartX = this.mouseX;
-      dragMouseStartY = this.mouseY;
-      domainXDragStart = this.x.domain();
-      domainYDragStart = this.y.domain();
-      brushContext.addEventListener("mousemove", rightDragMove);
+      let event = d3.event;
+      if (event.button === 2) { //only for right click
+        if (event.detail === 1) { // only for single click
+          let brushContext = document.getElementById("brushContext");
+          dragMouseStartX = this.mouseX;
+          dragMouseStartY = this.mouseY;
+          domainXDragStart = this.x.domain();
+          domainYDragStart = this.y.domain();
+          brushContext.addEventListener("mousemove", rightDragMove);
+        }// only for single clicks
+      }
     }
 
     let lastUpdate = Date.now();
@@ -264,6 +258,8 @@ export class ImagePlot {
     let frameTime = 1000 / fps;
 
     let rightDragMove = (event) => {
+      dragging = true;
+
       if (Date.now() - lastUpdate < frameTime) {
         return
       }
@@ -292,12 +288,37 @@ export class ImagePlot {
     }
 
     let rightDragStop = () => {
-      let brushContext = document.getElementById("brushContext");
-      brushContext.removeEventListener("mousemove", rightDragMove)
+      let event = d3.event;
+      if (event.button === 2) { //only for right click
+        if (!dragging) {
+          if (event.detail === 1) { // single click
+            this.zoom(1.7);
+          } else { //double click
+            this.updateDomain(0, this.imageWidth, 0, this.imageHeight);
+            this.update();
+          }
+        }
+        let brushContext = document.getElementById("brushContext");
+        brushContext.removeEventListener("mousemove", rightDragMove)
+      }
+      dragging = false;
     }
 
     this.brushContext.on("mousedown", rightDragStart)
     this.brushContext.on("mouseup", rightDragStop)
+  }
+
+  zoom(factor: number) {
+    let currentWidth = this.x.domain()[1] - this.x.domain()[0]
+    let currentHeight = this.y.domain()[1] - this.y.domain()[0]
+    let mouseXFrac = (this.mouseX - this.x.domain()[0]) / currentWidth
+    let mouseYFrac = (this.mouseY - this.y.domain()[0]) / currentHeight
+    let newLeft = this.x.domain()[0] - mouseXFrac * currentWidth * factor;
+    let newRight = this.x.domain()[1] + (1-mouseXFrac) * currentWidth * factor;
+    let newBottom = this.y.domain()[0] - mouseYFrac * currentHeight * factor;
+    let newTop = this.y.domain()[1] + (1-mouseYFrac) * currentHeight * factor;
+    this.updateDomain(newLeft, newRight, newBottom, newTop);
+    this.update();
   }
 
   updateDomain(left: number, right: number, bottom: number, top: number) {
