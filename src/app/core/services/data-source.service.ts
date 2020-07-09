@@ -62,7 +62,7 @@ export class DataSourceService {
     for (let i = 0; i < width; i++) {
       for (let j = 0; j < height; j++) {
         index = (i * width + j) * 3;
-        color = Math.floor(i/(width-1) * j/(height-1) * 255);
+        color = Math.floor(i / (width - 1) * j / (height - 1) * 255);
 
         data[index] = color;
         data[index + 1] = color;
@@ -88,6 +88,26 @@ export class DataSourceService {
         data[index + 1] = color;
         data[index + 2] = color;
       }
+    }
+    return data;
+  }
+
+  createDetectorImage(width, height) {
+    let size = width * height;
+    let data = new Uint16Array(size)
+
+    for (let i = 0; i < size; i++) {
+      data[i] = i;
+    }
+    return data;
+  }
+
+  createRandomDetectorImage(width, height) {
+    let size = width * height;
+    let data = new Uint16Array(size)
+
+    for (let i = 0; i < size; i++) {
+      data[i] = Math.floor(Math.random() * 65536);
     }
     return data;
   }
@@ -126,7 +146,7 @@ export class DataSourceService {
     let result = matrix.slice();
     for (let i = 0; i < matrix.length; i++) {
       for (let j = 0; j < matrix[i].length; j++) {
-        color = i/matrix.length * j/matrix[i].length * 255;
+        color = i / matrix.length * j / matrix[i].length * 255;
         result[i][j][0] *= color;
         result[i][j][1] *= color;
         result[i][j][2] *= color;

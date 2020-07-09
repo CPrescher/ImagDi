@@ -22,7 +22,7 @@ export class D3WebglPlotComponent implements AfterViewInit {
 
   ngAfterViewInit() {
     this.imagePlot = new ImagePlot("#graph");
-    this.imagePlot.plotImage(this.dataService.createRandomImage(this.imageWidth, this.imageHeight),
+    this.imagePlot.plotImage(this.dataService.createRandomDetectorImage(this.imageWidth, this.imageHeight),
       this.imageWidth, this.imageHeight);
 
     // this.whiteNoiseTV()
@@ -36,7 +36,7 @@ export class D3WebglPlotComponent implements AfterViewInit {
 
     let random_images = new Array(num_images);
     for (let i = 0; i < num_images; i++) {
-      random_images[i] = this.dataService.createRandomImage(width, height)
+      random_images[i] = this.dataService.createRandomDetectorImage(width, height)
     }
 
     this.sub = interval(1).subscribe(() => {
