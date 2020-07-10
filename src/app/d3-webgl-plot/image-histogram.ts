@@ -35,14 +35,15 @@ export class ImageHistogram {
     this._plotWidth = this.width * 2 / 3;
     this._colorBarWidth = this.width / 3;
 
-    this.initPlot();
-    this.initAxes();
-    this.initBrush();
+    this._initPlot();
+    this._initClip();
+    this._initAxes();
+    this._initBrush();
     this.initColorBar();
 
   }
 
-  initPlot() {
+  _initPlot() {
     this.histPlot = d3.select(this.selector)
       .append("svg")
       .attr("width", this._plotWidth + this.margin.left)
@@ -58,7 +59,17 @@ export class ImageHistogram {
       .append("g")
   }
 
-  initAxes() {
+  _initClip(){
+    this.clip = this.histPlot.append("clipPath")
+      .attr("id", "clip")
+      .append("rect")
+      .attr("x", 0)
+      .attr("y", 0)
+      .attr("width", this._plotWidth)
+      .attr("height", this.height)
+  }
+
+  _initAxes() {
     this.x = d3.scaleLog()
       .domain([1e-10, 100])
       .range([0, this._plotWidth])
@@ -76,7 +87,7 @@ export class ImageHistogram {
       .call(d3.axisLeft(this.y));
   }
 
-  initBrush() {
+  _initBrush() {
     let brushed = () => {
       let min = this.y.invert(d3.event.selection[0]);
       let max = this.y.invert(d3.event.selection[1]);
@@ -90,6 +101,7 @@ export class ImageHistogram {
 
     this.brushElement = this.histPlot.append("g")
       .attr("class", "brush")
+      .attr("clip-path", "url(#clip)")
       .call(this.brush)
       .call(this.brush.move, [0, this.height])
 
