@@ -59,7 +59,7 @@ export class ImageHistogram {
       .append("g")
   }
 
-  _initClip(){
+  _initClip() {
     this.clip = this.histPlot.append("clipPath")
       .attr("id", "clip")
       .append("rect")
@@ -89,8 +89,8 @@ export class ImageHistogram {
 
   _initBrush() {
     let brushed = () => {
-      let min = this.y.invert(d3.event.selection[0]);
-      let max = this.y.invert(d3.event.selection[1]);
+      let min = this.y.invert(d3.event.selection[1]);
+      let max = this.y.invert(d3.event.selection[0]);
       this.colorScale.domain([min, max]);
       this.rangeChanged.next([min, max]);
     }
@@ -151,7 +151,7 @@ export class ImageHistogram {
     }
 
     // get histogram
-    if(!bins) {
+    if (!bins) {
       bins = Math.sqrt(length);
     }
     const step = Math.ceil(d3.max([1, Math.sqrt(length) / 200]));
@@ -169,17 +169,19 @@ export class ImageHistogram {
       binCenters[i] = i * binSize + binOffset
     }
 
-    return {
+    this.hist = {
       data: histogram,
       binCenters: binCenters,
       min: min,
       max: max,
       binSize: binSize
     };
+
+    return this.hist;
   }
 
   updateImage(imageData) {
-    this.hist = this.calculateHistogram(imageData);
+    this.calculateHistogram(imageData);
     this.plotHistogram();
   }
 
@@ -187,8 +189,8 @@ export class ImageHistogram {
     const xy = [];
     let dataMin = Infinity;
     for (let i = 0; i < this.hist.data.length; i++) {
-      if(this.hist.data[i] != 0 && this.hist.binCenters[i] != 0) {
-        if(this.hist.data[i] < dataMin) {
+      if (this.hist.data[i] != 0 && this.hist.binCenters[i] != 0) {
+        if (this.hist.data[i] < dataMin) {
           dataMin = this.hist.data[i];
         }
         xy.push({x: this.hist.binCenters[i], y: this.hist.data[i]})
@@ -227,7 +229,8 @@ export class ImageHistogram {
     let pos = 0;
     let c: any;
     let t1 = Date.now();
-    this.calcColorLut(0, 66000);
+    this.calcColorLut();
+    console.log(Date.now() - t1)
     for (let i = 0; i < imageArray.length; i++) {
       const c = this.colorLut[imageArray[i]]
       pos = i * 3;
@@ -252,10 +255,23 @@ export class ImageHistogram {
     return colorImageArray;
   }
 
-  calcColorLut(min, max) {
-    this.colorLut = new Array((max - min) * 3)
-    for (let i = 0; i < max - min; i++) {
+  calcColorLut() {
+    let min = this.hist.min;
+    let max = this.hist.max + 1;
+    this.colorLut = new Array(max - min);
+    const colorScaleMin = d3.max([Math.floor(this.colorScale.domain()[0]), min]);
+    const colorScaleMax = d3.min([Math.floor(this.colorScale.domain()[1]), max]);
+    const colorMin = this.hexToRgb(this.colorScale(colorScaleMin))
+    const colorMax = this.hexToRgb(this.colorScale(colorScaleMax))
+
+    for (let i = 0; i < colorScaleMin; i++) {
+      this.colorLut[i] = colorMin;
+    }
+    for (let i = colorScaleMin; i < colorScaleMax; i++) {
       this.colorLut[i] = this.hexToRgb(this.colorScale(min + i));
+    }
+    for (let i = colorScaleMax; i < max; i++) {
+      this.colorLut[i] = colorMax;
     }
   }
 
