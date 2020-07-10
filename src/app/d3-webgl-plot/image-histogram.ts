@@ -1,4 +1,6 @@
 import * as d3 from 'd3';
+import { SVG, Group } from './d3-lib';
+import { Subject } from 'rxjs';
 
 export class ImageHistogram {
   margin = {
@@ -7,7 +9,9 @@ export class ImageHistogram {
   width = 100;
   height = 400;
   histPlot;
+  histPath;
   colorScaleBar;
+  colorScale;
   x;
   xAxis;
   y;
@@ -15,18 +19,27 @@ export class ImageHistogram {
 
   hist;
   histLine;
+  brush;
+  brushElement;
+
+  public rangeChanged = new Subject<[number, number]>();
   private clip;
 
   constructor(private selector: string) {
+    this.colorScale = d3.scaleSequential(d3.interpolateInferno)
+      .domain([0, 65000])
+
     this.initPlot();
     this.initAxes();
+    this.initBrush();
     this.initColorBar();
+
   }
 
   initPlot() {
     this.histPlot = d3.select(this.selector)
       .append("svg")
-      .attr("width", this.width/2 + this.margin.left)
+      .attr("width", this.width / 2 + this.margin.left)
       .attr("height", this.height + this.margin.top + this.margin.bottom)
       .append("g")
       .attr("transform", "translate(" + this.margin.left + "," + this.margin.top + ")")
@@ -34,12 +47,15 @@ export class ImageHistogram {
       .on("contextmenu", () => {
         d3.event.preventDefault();
       })
+
+    this.histPath = this.histPlot
+      .append("g")
   }
 
   initAxes() {
     this.x = d3.scaleLog()
       .domain([1e-10, 100])
-      .range([0, this.width/2])
+      .range([0, this.width / 2])
 
     this.xAxis = this.histPlot.append("g")
       .attr("transform", "translate(0, " + this.height + ")")
@@ -52,6 +68,25 @@ export class ImageHistogram {
 
     this.yAxis = this.histPlot.append("g")
       .call(d3.axisLeft(this.y));
+  }
+
+  initBrush() {
+    let brushed = () => {
+      let min = this.y.invert(d3.event.selection[0]);
+      let max = this.y.invert(d3.event.selection[1]);
+      this.colorScale.domain([min, max]);
+      this.rangeChanged.next([min, max]);
+    }
+
+    this.brush = d3.brushY()
+      .extent([[0, -this.height/2], [this.width / 2, this.height*1.5]])
+      .on("brush end", brushed)
+
+    this.brushElement = this.histPlot.append("g")
+      .attr("class", "brush")
+      .call(this.brush)
+      .call(this.brush.move, [0, this.height])
+
   }
 
   initColorBar() {
@@ -84,8 +119,6 @@ export class ImageHistogram {
       .style("fill", function (d, i) {
         return colorScale(d)
       })
-
-
   }
 
   calculateHistogram(imageData, bins: number) {
@@ -127,7 +160,6 @@ export class ImageHistogram {
   }
 
   plotHistogram() {
-
     const xy = [];
     for (let i = 0; i < this.hist.data.length; i++) {
       xy.push({x: this.hist.binCenters[i], y: this.hist.data[i]})
@@ -146,15 +178,60 @@ export class ImageHistogram {
 
 
     //Create line
-    this.histPlot.append("path")
+    this.histPath.append("path")
       .datum(xy)
       .attr("class", "line")
       .attr("d", this.histLine)
       .attr("fill", "none")
       .attr("stroke", "black")
-      .attr("stroke-width", 1)
+      .attr("stroke-width", 0.5)
+  }
 
+  calcColorImage(imageArray) {
+    let colorImageArray = new Uint8ClampedArray(imageArray.length * 3)
+    let pos = 0;
+    let c: any;
+    let t1 = Date.now();
+    this.calcColorLut(0, 66000);
+    for (let i = 0; i < imageArray.length; i++) {
+      const c = this.colorLut[imageArray[i]]
+      pos = i * 3;
+      colorImageArray[pos] = c[0];
+      colorImageArray[pos + 1] = c[1];
+      colorImageArray[pos + 2] = c[2];
+    }
+    return colorImageArray;
+  }
 
+  calcColorImageOld(imageArray) {
+    let colorImageArray = new Uint8ClampedArray(imageArray.length * 3)
+    let pos = 0;
+    let c: any;
+    for (let i = 0; i < imageArray.length; i++) {
+      const c = this.hexToRgb(this.colorScale(imageArray[i]))
+      pos = i * 3;
+      colorImageArray[pos] = c[0];
+      colorImageArray[pos + 1] = c[1];
+      colorImageArray[pos + 2] = c[2];
+    }
+    return colorImageArray;
+  }
+
+  colorLut
+
+  calcColorLut(min, max){
+    this.colorLut = new Array((max-min)*3)
+    for(let i = 0; i<max-min; i++) {
+      this.colorLut[i] = this.hexToRgb(this.colorScale(min+i));
+    }
+  }
+
+  hexToRgb(hex) {
+    let bigint = parseInt(hex.substr(1), 16);
+    let r = (bigint >> 16) & 255;
+    let g = (bigint >> 8) & 255;
+    let b = bigint & 255;
+    return [r, g, b]
   }
 
   _updateAxes(duration = 500) {
@@ -174,6 +251,5 @@ export class ImageHistogram {
           .ticks(20)
           .tickFormat(() => "")
       )
-
   }
 }

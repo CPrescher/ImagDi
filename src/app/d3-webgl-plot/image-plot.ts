@@ -1,12 +1,11 @@
 import * as d3 from 'd3';
 import * as THREE from 'three';
 
-import Timeout = NodeJS.Timeout;
-import { ImageHistogram } from './image-histogram';
-
+import { ImageHistogram } from './image-histogram'
 export class ImagePlot {
-  imageWidth = 256;
-  imageHeight = 256;
+  imageWidth = 2048;
+  imageHeight = 2048;
+  imageArray;
 
   margin = {
     top: 10, right: 10, bottom: 30, left: 60
@@ -26,6 +25,7 @@ export class ImagePlot {
 
   mouseX: number;
   mouseY: number;
+
 
   private histogram
 
@@ -47,24 +47,16 @@ export class ImagePlot {
 
   constructor(selector: string) {
     this._initImagePlot(selector);
-    this.histogram = new ImageHistogram(selector);
-    this.colorScale = d3.scaleSequential(d3.interpolateInferno)
-      .domain([0, 65000])
+    this._initHistogram(selector);
   }
 
   plotImage(imageArray, width, height) {
-    let colorImageArray = new Uint8ClampedArray(imageArray.length * 3)
-    let pos = 0;
-    let c: any;
-    for (let i = 0; i < imageArray.length; i++) {
-      c = this.hexToRgb(this.colorScale(imageArray[i]))
-      pos = i * 3;
-      colorImageArray[pos] = c[0];
-      colorImageArray[pos + 1] = c[1];
-      colorImageArray[pos + 2] = c[2];
-    }
-    this._updateTexture(colorImageArray, width, height);
+    this.imageArray = imageArray;
+    this.imageWidth = width;
+    this.imageHeight = height;
     this.histogram.updateImage(imageArray);
+    let colorImageArray = this.histogram.calcColorImage(imageArray)
+    this._updateTexture(colorImageArray, width, height);
   }
 
   zoom(factor: number) {
@@ -80,13 +72,7 @@ export class ImagePlot {
     this._update();
   }
 
-  hexToRgb(hex) {
-    let bigint = parseInt(hex.substr(1), 16);
-    let r = (bigint >> 16) & 255;
-    let g = (bigint >> 8) & 255;
-    let b = bigint & 255;
-    return [r, g, b]
-  }
+
 
   _initImagePlot(selector) {
     this._initSVG(selector);
@@ -97,6 +83,29 @@ export class ImagePlot {
     this._initMousePosition();
     this._initWheel();
     this._initRightClickBehavior();
+  }
+
+  _initHistogram(selector) {
+
+    this.histogram = new ImageHistogram(selector);
+    this.histogram.rangeChanged.subscribe(() => {
+      updateRange()
+    });
+
+    let inProgress = false;
+    let timeout;
+
+    let updateRange = () => {
+      if (inProgress){
+        clearTimeout(timeout)
+        timeout = setTimeout(() => updateRange(), 50);
+        return;
+      }
+      inProgress = true;
+      let colorImageArray = this.histogram.calcColorImage(this.imageArray)
+      this._updateTexture(colorImageArray, this.imageWidth, this.imageHeight);
+      setTimeout(()=> inProgress= false, 10)
+    }
   }
 
   _initSVG(selector: string) {
