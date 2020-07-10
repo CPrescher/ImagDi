@@ -23,6 +23,7 @@ export class ImageHistogram {
   brushElement;
 
   public rangeChanged = new Subject<[number, number]>();
+  colorLut
   private clip;
 
   constructor(private selector: string) {
@@ -79,7 +80,7 @@ export class ImageHistogram {
     }
 
     this.brush = d3.brushY()
-      .extent([[0, -this.height/2], [this.width / 2, this.height*1.5]])
+      .extent([[0, -this.height / 2], [this.width / 2, this.height * 1.5]])
       .on("brush end", brushed)
 
     this.brushElement = this.histPlot.append("g")
@@ -125,17 +126,20 @@ export class ImageHistogram {
     // find minimum and maximum
     let min = Infinity;
     let max = -Infinity;
+    const length = imageData.length
+
     for (const item of imageData) {
       if (item < min) min = item;
       else if (item > max) max = item;
     }
 
     // get histogram
+    const step = Math.ceil(d3.max([1, Math.sqrt(length) / 200]));
     const binSize = (max - min) / bins;
     const histogram = new Uint32Array(bins).fill(0);
 
-    for (const item of imageData) {
-      histogram[Math.floor((item - min) / binSize)]++;
+    for (let i = 0; i < imageData.length; i = i + step) {
+      histogram[Math.floor((imageData[i] - min) / binSize)]++;
     }
 
     // calculate bin center positions
@@ -217,12 +221,10 @@ export class ImageHistogram {
     return colorImageArray;
   }
 
-  colorLut
-
-  calcColorLut(min, max){
-    this.colorLut = new Array((max-min)*3)
-    for(let i = 0; i<max-min; i++) {
-      this.colorLut[i] = this.hexToRgb(this.colorScale(min+i));
+  calcColorLut(min, max) {
+    this.colorLut = new Array((max - min) * 3)
+    for (let i = 0; i < max - min; i++) {
+      this.colorLut[i] = this.hexToRgb(this.colorScale(min + i));
     }
   }
 
