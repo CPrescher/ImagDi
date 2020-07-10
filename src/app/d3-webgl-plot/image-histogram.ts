@@ -25,10 +25,15 @@ export class ImageHistogram {
   public rangeChanged = new Subject<[number, number]>();
   colorLut
   private clip;
+  private _plotWidth;
+  private _colorBarWidth;
 
   constructor(private selector: string) {
     this.colorScale = d3.scaleSequential(d3.interpolateInferno)
       .domain([0, 65000])
+
+    this._plotWidth = this.width * 2 / 3;
+    this._colorBarWidth = this.width / 3;
 
     this.initPlot();
     this.initAxes();
@@ -40,11 +45,11 @@ export class ImageHistogram {
   initPlot() {
     this.histPlot = d3.select(this.selector)
       .append("svg")
-      .attr("width", this.width / 2 + this.margin.left)
+      .attr("width", this._plotWidth + this.margin.left)
       .attr("height", this.height + this.margin.top + this.margin.bottom)
       .append("g")
       .attr("transform", "translate(" + this.margin.left + "," + this.margin.top + ")")
-      .attr("width", this.width / 2)
+      .attr("width", this._plotWidth)
       .on("contextmenu", () => {
         d3.event.preventDefault();
       })
@@ -56,7 +61,7 @@ export class ImageHistogram {
   initAxes() {
     this.x = d3.scaleLog()
       .domain([1e-10, 100])
-      .range([0, this.width / 2])
+      .range([0, this._plotWidth])
 
     this.xAxis = this.histPlot.append("g")
       .attr("transform", "translate(0, " + this.height + ")")
@@ -80,7 +85,7 @@ export class ImageHistogram {
     }
 
     this.brush = d3.brushY()
-      .extent([[0, -this.height / 2], [this.width / 2, this.height * 1.5]])
+      .extent([[0, -this.height / 2], [this._plotWidth, this.height * 1.5]])
       .on("brush end", brushed)
 
     this.brushElement = this.histPlot.append("g")
@@ -93,11 +98,11 @@ export class ImageHistogram {
   initColorBar() {
     this.colorScaleBar = d3.select(this.selector)
       .append("svg")
-      .attr("width", this.width / 2 + this.margin.right - this.margin.between / 2)
+      .attr("width", this._colorBarWidth + this.margin.right - this.margin.between / 2)
       .attr("height", this.height + this.margin.top + this.margin.bottom)
       .append("g")
       .attr("transform", "translate(" + this.margin.between + "," + this.margin.top + ")")
-      .attr("width", this.width / 2)
+      .attr("width", this._colorBarWidth)
       .on("contextmenu", () => {
         d3.event.preventDefault();
       })
@@ -116,13 +121,13 @@ export class ImageHistogram {
       })
       .attr("x", 0)
       .attr("height", 1)
-      .attr("width", this.width / 2)
+      .attr("width", this._colorBarWidth)
       .style("fill", function (d, i) {
         return colorScale(d)
       })
   }
 
-  calculateHistogram(imageData, bins: number) {
+  calculateHistogram(imageData, bins?: number) {
     // find minimum and maximum
     let min = Infinity;
     let max = -Infinity;
@@ -134,6 +139,9 @@ export class ImageHistogram {
     }
 
     // get histogram
+    if(!bins) {
+      bins = Math.sqrt(length);
+    }
     const step = Math.ceil(d3.max([1, Math.sqrt(length) / 200]));
     const binSize = (max - min) / bins;
     const histogram = new Uint32Array(bins).fill(0);
@@ -159,16 +167,22 @@ export class ImageHistogram {
   }
 
   updateImage(imageData) {
-    this.hist = this.calculateHistogram(imageData, 5000);
+    this.hist = this.calculateHistogram(imageData);
     this.plotHistogram();
   }
 
   plotHistogram() {
     const xy = [];
+    let dataMin = Infinity;
     for (let i = 0; i < this.hist.data.length; i++) {
-      xy.push({x: this.hist.binCenters[i], y: this.hist.data[i]})
+      if(this.hist.data[i] != 0 && this.hist.binCenters[i] != 0) {
+        if(this.hist.data[i] < dataMin) {
+          dataMin = this.hist.data[i];
+        }
+        xy.push({x: this.hist.binCenters[i], y: this.hist.data[i]})
+      }
     }
-    this.x.domain([d3.min(this.hist.data), d3.max(this.hist.data)]);
+    this.x.domain([dataMin, d3.max(this.hist.data)]);
     this.y.domain([d3.min(this.hist.binCenters), this.hist.max]);
     this._updateAxes();
 
@@ -182,13 +196,18 @@ export class ImageHistogram {
 
 
     //Create line
-    this.histPath.append("path")
-      .datum(xy)
-      .attr("class", "line")
+    let path = this.histPath.selectAll('path').data([xy])
+    path.transition().duration(200)
       .attr("d", this.histLine)
       .attr("fill", "none")
       .attr("stroke", "black")
       .attr("stroke-width", 0.5)
+    path.enter().append('path')
+      .attr("d", this.histLine)
+      .attr("fill", "none")
+      .attr("stroke", "black")
+      .attr("stroke-width", 0.5)
+    path.exit().remove()
   }
 
   calcColorImage(imageArray) {
